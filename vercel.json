@@ -1,20 +1,19 @@
 {
-  "name": "gana-staking-dapp",
   "version": 2,
-  "builds": [
-    {
-      "src": "*.html",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "public/*",
-      "use": "@vercel/static"
+  "functions": {
+    "api/proxy.js": {
+      "maxDuration": 10,
+      "memory": 1024
     }
-  ],
+  },
   "routes": [
     {
+      "src": "/api/proxy",
+      "dest": "/api/proxy.js"
+    },
+    {
       "src": "/(.*)",
-      "dest": "/index.html"
+      "dest": "/public/index.html"
     }
   ],
   "headers": [
@@ -22,23 +21,18 @@
       "source": "/(.*)",
       "headers": [
         {
-          "key": "X-Frame-Options",
-          "value": "DENY"
+          "key": "Access-Control-Allow-Origin",
+          "value": "*"
         },
         {
-          "key": "X-Content-Type-Options",
-          "value": "nosniff"
+          "key": "Access-Control-Allow-Methods",
+          "value": "GET, POST, OPTIONS"
         },
         {
-          "key": "Referrer-Policy",
-          "value": "strict-origin-when-cross-origin"
+          "key": "Access-Control-Allow-Headers",
+          "value": "X-Requested-With, Content-Type, Accept"
         }
       ]
     }
-  ],
-  "env": {
-    "CONTRACT_ADDRESS": "0x72212F35aC448FE7763aA1BFdb360193Fa098E52",
-    "LP_CONTRACT_ADDRESS": "0xa2f464a2462aed49b9b31eb8861bc6b0bbb0483f",
-    "NETWORK": "bsc"
-  }
+  ]
 }
