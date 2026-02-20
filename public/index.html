@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5">
+    <title>GANA质押数据监控平台</title>
+    <!-- 引入 Bootstrap 用于快速布局 -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- 引入 Ethers.js V6 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.0/ethers.umd.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body { 
+            background-color: #0f172a; 
+            color: #e2e8f0; 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        
+        .container-fluid {
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+        
+        /* 统计卡片 */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+        
+        .stat-card {
+            background: linear-gradient(145deg, #1e293b, #0f172a);
+            border: 1px solid #334155;
+            border-radius: 16px;
+            padding: 20px 18px;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-4px);
+            border-color: #3b82f6;
+            box-shadow: 0 12px 24px rgba(59, 130, 246, 0.2);
+        }
+        
+        .stat-title {
+            color: #94a3b8;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .stat-value {
+            color: #38bdf8;
+            font-size: 1.8rem;
+            font-weight: bold;
+            font-family: 'Courier New', monospace;
+            line-height: 1.2;
+            margin-bottom: 4px;
+        }
+        
+        .stat-sub {
+            color: #4ade80;
+            font-size: 0.9rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .stats-badge {
+            display: inline-block;
+            background-color: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 20px;
+            padding: 4px 12px;
+            font-size: 0.75rem;
+            color: #94a3b8;
+        }
+        
+        /* 周期标签 */
+        .badge-duration { 
+            padding: 4px 10px; 
+            border-radius: 20px; 
+            font-size: 0.75rem;
+            white-space: nowrap;
+            display: inline-block;
+            font-weight: 600;
+        }
+        
+        .badge-1d { 
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+            color: white; 
+            box-shadow: 0 2px 4px rgba(59, 130, 246, 0.3);
+        }
+        .badge-15d { 
+            background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+            color: white;
+            box-shadow: 0 2px 4px rgba(139, 92, 246, 0.3);
+        }
+        .badge-30d { 
+            background: linear-gradient(135deg, #ec4899, #db2777);
+            color: white;
+            box-shadow: 0 2px 4px rgba(236, 72, 153, 0.3);
+        }
+        
+        /* 表格样式 */
+        .table-container {
+            background: linear-gradient(145deg, #1e293b, #0f172a);
+            border-radius: 16px;
+            padding: 20px;
+            border: 1px solid #334155;
+            margin-top: 24px;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+        }
+        
+        .table { 
+            color: #e2e8f0; 
+            font-size: 0.9rem; 
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+        }
+        
+        .table thead th { 
+            border-bottom: 2px solid #334155; 
+            color: #94a3b8; 
+            font-size: 0.8rem; 
+            padding: 16px 8px;
+            text-align: center;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .table td { 
+            border-bottom: 1px solid #334155; 
+            vertical-align: middle;
+            padding: 14px 8px;
+            text-align: center;
+        }
+        
+        .table tbody tr:hover {
+            background-color: rgba(59, 130, 246, 0.1);
+        }
+        
+        /* 地址样式 */
+        .address-cell {
+            font-family: 'Courier New', monospace;
+            font-size: 0.85rem;
+            color: #60a5fa;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+        
+        .address-cell:hover {
+            color: #3b82f6;
+            text-decoration: underline;
+        }
+        
+        /* 金额样式 */
+        .amount-cell {
+            font-family: 'Courier New', monospace;
+            font-size: 0.95rem;
+            color: #4ade80;
+            font-weight: 600;
+        }
+        
+        /* 时间双行显示 */
+        .time-two-lines {
+            display: flex;
+            flex-direction: column;
+            line-height: 1.5;
+        }
+        .time-date {
+            font-size: 0.8rem;
+            color: #94a3b8;
+        }
+        .time-clock {
+            font-size: 0.85rem;
+            font-family: 'Courier New', monospace;
+            color: #38bdf8;
+            font-weight: 500;
+        }
+        
+        /* 状态样式 */
+        .status-locked {
+            color: #f87171;
+            font-weight: 500;
+        }
+        .status-unlocked {
+            color: #4ade80;
+            font-weight: 500;
+        }
+        .status-redeemed {
+            color: #94a3b8;
+        }
+        
+        /* 地址输入区域 */
+        .address-input-area {
+            background: linear-gradient(145deg, #1e293b, #0f172a);
+            border: 1px solid #334155;
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 24px;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+        }
+        
+        .address-textarea {
+            background-color: #0f172a;
+            border: 1px solid #334155;
+            color: #e2e8f0;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            width: 100%;
+            min-height: 200px;
+            padding: 16px;
+            border-radius: 12px;
+            margin-bottom: 16px;
+            resize: vertical;
+            transition: all 0.2s;
+        }
+        
+        .address-textarea:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+        }
+        
+        .btn-query {
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+            border: none;
+            padding: 14px 32px;
+            border-radius: 12px;
+            color: white;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: 1px solid #60a5fa;
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+        }
+        
+        .btn-query:hover:not(:disabled) {
+            background: linear-gradient(135deg, #2563eb, #1d4ed8);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(37, 99, 235, 0.4);
+        }
+        
+        .btn-query:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .btn-clear {
+            background-color: #334155;
+            border: 1px solid #475569;
+            padding: 14px 24px;
+            border-radius: 12px;
+            color: #e2e8f0;
+            font-size: 1rem;
+            cursor: pointer;
+            margin-left: 12px;
+            transition: all 0.2s;
+        }
+        
+        .btn-clear:hover {
+            background-color: #475569;
+            border-color: #64748b;
+        }
+        
+        .example-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin: 16px 0;
+        }
+        
+        .example-tag {
+            background-color: #1e293b;
+            border: 1px solid #334155;
+            color: #94a3b8;
+            padding: 6px 16px;
+            border-radius: 30px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .example-tag:hover {
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+            border-color: #60a5fa;
+            color: white;
+            transform: translateY(-1px);
+        }
+        
+        /* 进度条 */
+        .progress-container {
+            margin-top: 20px;
+            padding: 16px;
+            background-color: #1e293b;
+            border-radius: 12px;
+            border: 1px solid #334155;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background-color: #334155;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+            transition: width 0.3s ease;
+            border-radius: 4px;
+        }
+        
+        .loading-text {
+            color: #38bdf8;
+            font-size: 0.9rem;
+            margin-top: 10px;
+            text-align: center;
+            font-family: 'Courier New', monospace;
+        }
+        
+        /* 头部样式 */
+        .header {
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #334155;
+        }
+        
+        .header h1 {
+            font-size: 2.2rem;
+            font-weight: bold;
+            background: linear-gradient(135deg, #60a5fa, #c084fc);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 8px;
+        }
+        
+        .header .subtitle {
+            color: #94a3b8;
+            font-size: 0.95rem;
+        }
+        
+        .contract-address {
+            font-family: 'Courier New', monospace;
+            background: linear-gradient(145deg, #1e293b, #0f172a);
+            border: 1px solid #334155;
+            padding: 10px 20px;
+            border-radius: 40px;
+            color: #60a5fa;
+            font-size: 0.9rem;
+            display: inline-block;
+            margin-top: 12px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+        
+        /* 钱包连接按钮 */
+        .wallet-btn {
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+            border: none;
+            padding: 10px 24px;
+            border-radius: 40px;
+            color: white;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+        
+        .wallet-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(37, 99, 235, 0.3);
+        }
+        
+        /* 导出按钮 */
+        .btn-export {
+            background-color: #334155;
+            border: 1px solid #475569;
+            padding: 8px 20px;
+            border-radius: 30px;
+            color: #e2e8f0;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+        }
+        
+        .btn-export:hover {
+            background-color: #3b82f6;
+            border-color: #60a5fa;
+            color: white;
+        }
+        
+        /* 响应式调整 */
+        @media (max-width: 768px) {
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .header h1 {
+                font-size: 1.8rem;
+            }
+            
+            .stat-value {
+                font-size: 1.4rem;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .btn-query, .btn-clear {
+                width: 100%;
+                margin-left: 0;
+                margin-top: 10px;
+            }
+        }
+
+        /* 空状态 */
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #64748b;
+        }
+        
+        .empty-state i {
+            font-size: 3rem;
+            margin-bottom: 16px;
+            opacity: 0.5;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <!-- 头部 -->
+        <div class="header d-flex justify-content-between align-items-start flex-wrap">
+            <div>
+                <h1>🔍 GANA 质押数据监控平台</h1>
+                <div class="subtitle">批量查询钱包质押记录 · 实时数据统计 · 支持1000+地址</div>
+                <div class="contract-address" id="stakingContractAddress">0x72212F35aC448FE7763aA1BFdb360193Fa098E52</div>
+            </div>
+            <div>
+                <button id="connectBtn" class="wallet-btn" onclick="connectWallet()">
+                    <span id="connectText">🔌 连接钱包</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- 统计卡片 - 第一行 -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-title">📊 总质押金额</div>
+                <div class="stat-value" id="totalStaked">0.00</div>
+                <div class="stat-sub">USDT</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-title">📈 1天池总质押</div>
+                <div class="stat-value" id="totalStaked1d">0.00</div>
+                <div class="stat-sub">
+                    USDT
+                    <span class="stats-badge" id="count1d">0地址</span>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-title">📊 15天池总质押</div>
+                <div class="stat-value" id="totalStaked15d">0.00</div>
+                <div class="stat-sub">
+                    USDT
+                    <span class="stats-badge" id="count15d">0地址</span>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-title">📈 30天池总质押</div>
+                <div class="stat-value" id="totalStaked30d">0.00</div>
+                <div class="stat-sub">
+                    USDT
+                    <span class="stats-badge" id="count30d">0地址</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 统计卡片 - 第二行 -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-title">⏳ 未来2天可赎回</div>
+                <div class="stat-value" id="unlock2d">0.00</div>
+                <div class="stat-sub">USDT</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-title">📅 未来7天可赎回</div>
+                <div class="stat-value" id="unlock7d">0.00</div>
+                <div class="stat-sub">USDT</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-title">📊 未来15天可赎回</div>
+                <div class="stat-value" id="unlock15d">0.00</div>
+                <div class="stat-sub">USDT</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-title">👥 查询地址数</div>
+                <div class="stat-value" id="totalAddresses">0</div>
+                <div class="stat-sub">/ 最大1000</div>
+            </div>
+        </div>
+
+        <!-- 地址输入区域 -->
+        <div class="address-input-area">
+            <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap">
+                <h5 class="mb-2 mb-md-0">📋 批量查询钱包地址</h5>
+                <span class="text-white-50">每行一个地址，支持最多1000个地址</span>
+            </div>
+            
+            <textarea id="addressList" class="address-textarea" placeholder="请输入钱包地址，每行一个&#10;例如：&#10;0x72212F35aC448FE7763aA1BFdb360193Fa098E52&#10;0x55d398326f99059fF775485246999027B3197955">0x72212F35aC448FE7763aA1BFdb360193Fa098E52</textarea>
+            
+            <div class="example-tags">
+                <span class="example-tag" onclick="addExampleAddress('0x72212F35aC448FE7763aA1BFdb360193Fa098E52')">➕ 添加合约地址</span>
+                <span class="example-tag" onclick="addExampleAddress('0x55d398326f99059fF775485246999027B3197955')">➕ 添加USDT地址</span>
+                <span class="example-tag" onclick="addExampleAddress('0xa2f464a2462aed49b9b31eb8861bc6b0bbb0483f')">➕ 添加LP池地址</span>
+                <span class="example-tag" onclick="addSampleAddresses()">📝 添加测试地址</span>
+                <span class="example-tag" onclick="clearAddresses()">🗑️ 清空</span>
+            </div>
+            
+            <div class="d-flex align-items-center mt-3 flex-wrap">
+                <button class="btn-query" onclick="batchQueryAddresses()" id="queryBtn">
+                    <span id="queryText">🔍 开始批量查询</span>
+                </button>
+                <button class="btn-clear" onclick="resetQuery()">🔄 重置</button>
+            </div>
+            
+            <!-- 进度条 -->
+            <div id="progressContainer" style="display: none;" class="progress-container">
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill" style="width: 0%;"></div>
+                </div>
+                <div class="loading-text" id="progressText">正在查询...</div>
+            </div>
+        </div>
+
+        <!-- 结果表格 -->
+        <div class="table-container">
+            <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap">
+                <h5 class="mb-2 mb-md-0">📊 查询结果 <span id="resultCount" class="stats-badge">0条记录</span></h5>
+                <div>
+                    <button class="btn-export" onclick="exportToCSV()">
+                        📥 导出CSV
+                    </button>
+                </div>
+            </div>
+            
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>钱包地址</th>
+                            <th>质押金额</th>
+                            <th>质押周期</th>
+                            <th>质押时间</th>
+                            <th>解锁时间</th>
+                            <th>剩余时间</th>
+                            <th>状态</th>
+                        </tr>
+                    </thead>
+                    <tbody id="resultTableBody">
+                        <tr>
+                            <td colspan="8" class="empty-state">
+                                <div>⚡ 请输入钱包地址并点击"开始批量查询"</div>
+                                <div style="font-size: 0.8rem; margin-top: 10px;">支持批量查询，每行一个地址</div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ================= 配置区域 =================
+        const CONFIG = {
+            STAKING: "0x72212F35aC448FE7763aA1BFdb360193Fa098E52",
+            USDT: "0x55d398326f99059fF775485246999027B3197955",
+            PAIR: "0xa2f464a2462aed49b9b31eb8861bc6b0bbb0483f",
+            MAX_ADDRESSES: 1000,
+            BATCH_SIZE: 20  // 每批查询地址数
+        };
+        
+        // 质押周期配置 (秒)
+        const STAKE_DURATIONS = {
+            0: 86400,
+            1: 1296000,
+            2: 2592000
+        };
+        
+        const STAKE_DURATION_LABELS = {
+            0: "1天",
+            1: "15天", 
+            2: "30天"
+        };
+        
+        const STAKE_DURATION_CLASS = {
+            0: "badge-1d",
+            1: "badge-15d", 
+            2: "badge-30d"
+        };
+        
+        // 测试地址
+        const SAMPLE_ADDRESSES = [
+            "0x72212F35aC448FE7763aA1BFdb360193Fa098E52",
+            "0x55d398326f99059fF775485246999027B3197955",
+            "0xa2f464a2462aed49b9b31eb8861bc6b0bbb0483f"
+        ];
+        // ===========================================
+
+        // ABIs
+        const ABI_ERC20 = [
+            "function balanceOf(address owner) view returns (uint256)",
+            "function decimals() view returns (uint8)"
+        ];
+
+        const ABI_STAKING = [{"inputs":[{"internalType":"address","name":"marketingAddress_","type":"address"},{"internalType":"address","name":"devAddress_","type":"address"},{"internalType":"address","name":"threesevenAddress_","type":"address"}],"stateMutability":"nonpayable","type":"constructor"},{"inputs":[{"internalType":"uint256","name":"x","type":"uint256"},{"internalType":"uint256","name":"y","type":"uint256"}],"name":"PRBMath_MulDiv18_Overflow","type":"error"},{"inputs":[{"internalType":"uint256","name":"x","type":"uint256"},{"internalType":"uint256","name":"y","type":"uint256"},{"internalType":"uint256","name":"denominator","type":"uint256"}],"name":"PRBMath_MulDiv_Overflow","type":"error"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":true,"internalType":"address","name":"newOwner","type":"address"}],"name":"OwnershipTransferred","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"uint256","name":"reward","type":"uint256"},{"indexed":false,"internalType":"uint40","name":"timestamp","type":"uint40"},{"indexed":false,"internalType":"uint256","name":"index","type":"uint256"}],"name":"RewardPaid","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"timestamp","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"index","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"stakeTime","type":"uint256"}],"name":"Staked","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"from","type":"address"},{"indexed":true,"internalType":"address","name":"to","type":"address"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"}],"name":"Transfer","type":"event"},{"inputs":[],"name":"GANA","outputs":[{"internalType":"contract IGANA","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"MIN_STAKE_USDT","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"back_Fee","outputs":[{"internalType":"uint8","name":"","type":"uint8"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"account","type":"address"}],"name":"balanceOf","outputs":[{"internalType":"uint256","name":"balance","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"decimals","outputs":[{"internalType":"uint8","name":"","type":"uint8"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"devAddress","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"user","type":"address"}],"name":"isPreacher","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"market_Fee","outputs":[{"internalType":"uint8","name":"","type":"uint8"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"marketingAddress","outputs":[{"internalType":"address","name":"
