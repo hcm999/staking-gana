@@ -46,6 +46,7 @@ export default function Dashboard() {
   const [data, setData] = useState<ChartData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [updating, setUpdating] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -66,6 +67,30 @@ export default function Dashboard() {
       setError('加载数据失败，请稍后重试');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleManualUpdate = async () => {
+    setUpdating(true);
+    try {
+      const res = await fetch('/api/cron/fetch-stake-data', {
+        headers: {
+          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_CRON_SECRET || 'local-dev'}`
+        }
+      });
+      if (res.ok) {
+        alert('数据更新成功！');
+        // 重新加载数据
+        fetchData();
+      } else {
+        const errorData = await res.json();
+        alert('更新失败：' + (errorData.error || '请稍后重试'));
+      }
+    } catch (error) {
+      console.error('手动更新失败:', error);
+      alert('更新失败，请检查网络');
+    } finally {
+      setUpdating(false);
     }
   };
 
@@ -109,17 +134,27 @@ export default function Dashboard() {
     <div className="p-4 md:p-6 max-w-7xl mx-auto">
       <h1 className="text-2xl font-bold mb-6">质押数据后台 - 每日质押量</h1>
       
-      {/* 时间范围选择 */}
-      <div className="mb-6 flex gap-2">
-        {(['7', '30', '90'] as const).map((days) => (
-          <Button
-            key={days}
-            variant={timeRange === days ? 'default' : 'outline'}
-            onClick={() => setTimeRange(days)}
-          >
-            最近{days}天
-          </Button>
-        ))}
+      {/* 时间范围选择和手动更新按钮 */}
+      <div className="mb-6 flex flex-wrap gap-2 items-center">
+        <div className="flex gap-2">
+          {(['7', '30', '90'] as const).map((days) => (
+            <Button
+              key={days}
+              variant={timeRange === days ? 'default' : 'outline'}
+              onClick={() => setTimeRange(days)}
+            >
+              最近{days}天
+            </Button>
+          ))}
+        </div>
+        <Button
+          variant="outline"
+          onClick={handleManualUpdate}
+          disabled={updating}
+          className="ml-auto bg-green-500 text-white hover:bg-green-600"
+        >
+          {updating ? '更新中...' : '手动更新数据'}
+        </Button>
       </div>
 
       {/* 质押池信息 */}
@@ -272,38 +307,38 @@ export default function Dashboard() {
             </LineChart>
           </ResponsiveContainer>
         </div>
-      </Card>
+      </卡片>
 
       {/* 每日明细表格 */}
       <Card>
         <h2 className="text-lg font-semibold mb-4">每日明细</h2>
         <div className="overflow-x-auto">
-          <Table>
-            <thead>
+          <表格>
+            <表头>
               <tr className="bg-gray-50">
                 <th className="px-4 py-2 text-left">日期</th>
                 <th className="px-4 py-2 text-right">当天新增质押 (USDT)</th>
                 <th className="px-4 py-2 text-right">当天解押 (USDT)</th>
                 <th className="px-4 py-2 text-right">净新增 (USDT)</th>
                 <th className="px-4 py-2 text-right">仍在质押 (USDT)</th>
-              </tr>
-            </thead>
-            <tbody>
+              </行>
+            </表头>
+            <主体>
               {data?.details.map((item) => (
                 <tr key={item.date} className="border-t">
                   <td className="px-4 py-2">{item.date}</td>
                   <td className="px-4 py-2 text-right">{formatNumber(item.newStake)}</td>
                   <td className="px-4 py-2 text-right">{formatNumber(item.newUnstake)}</td>
-                  <td className="px-4 py-2 text-right font-medium">
+                  <td className="px-4 py-2 text-right font-medium text-green-600">
                     {formatNumber(item.newStake - item.newUnstake)}
-                  </td>
+                  </单元格>
                   <td className="px-4 py-2 text-right">{formatNumber(item.activeStake)}</td>
-                </tr>
+                </行>
               ))}
-            </tbody>
-          </Table>
+            </主体>
+          </表格>
         </div>
-      </Card>
+      </卡片>
     </div>
   );
 }
