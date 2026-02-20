@@ -572,17 +572,65 @@
         };
 
         // ================= 初始化 =================
-        window.addEventListener('load', async () => {
-            try {
-                // 使用代理RPC
-                const provider = new ethers.JsonRpcProvider('/api/proxy');
-                stakingContract = new ethers.Contract(CONFIG.STAKING, ABI_STAKING, provider);
-                console.log("✅ 合约初始化成功");
-                document.getElementById('stakingContractAddress').innerText = CONFIG.STAKING;
-            } catch (error) {
-                console.error("❌ 初始化失败:", error);
+window.addEventListener('load', async () => {
+    try {
+        // BSC节点列表
+        const BSC_NODES = [
+            'https://bsc-dataseed1.binance.org',
+            'https://bsc-dataseed2.binance.org',
+            'https://bsc-dataseed3.binance.org',
+            'https://bsc-dataseed4.binance.org',
+            'https://bsc-dataseed1.defibit.io',
+            'https://bsc-dataseed2.defibit.io',
+            'https://bsc-dataseed1.ninicoin.io',
+            'https://bsc-dataseed2.ninicoin.io'
+        ];
+
+        let connected = false;
+        let lastError = null;
+
+        // 先尝试代理
+        try {
+            console.log("尝试通过代理连接...");
+            const proxyProvider = new ethers.JsonRpcProvider('/api/proxy');
+            await proxyProvider.getBlockNumber(); // 测试连接
+            stakingContract = new ethers.Contract(CONFIG.STAKING, ABI_STAKING, proxyProvider);
+            console.log("✅ 通过代理连接成功");
+            connected = true;
+        } catch (proxyError) {
+            console.log("代理连接失败:", proxyError.message);
+            lastError = proxyError;
+        }
+
+        // 如果代理失败，尝试直接连接BSC节点
+        if (!connected) {
+            for (const node of BSC_NODES) {
+                try {
+                    console.log(`尝试直接连接节点: ${node}`);
+                    const directProvider = new ethers.JsonRpcProvider(node);
+                    await directProvider.getBlockNumber(); // 测试连接
+                    stakingContract = new ethers.Contract(CONFIG.STAKING, ABI_STAKING, directProvider);
+                    console.log(`✅ 直接连接成功: ${node}`);
+                    connected = true;
+                    break;
+                } catch (nodeError) {
+                    console.log(`节点 ${node} 连接失败:`, nodeError.message);
+                    lastError = nodeError;
+                }
             }
-        });
+        }
+
+        if (connected) {
+            document.getElementById('stakingContractAddress').innerText = CONFIG.STAKING;
+            console.log("✅ 合约初始化成功，准备就绪");
+        } else {
+            console.error("❌ 所有连接方式都失败:", lastError);
+            alert("无法连接到BSC网络，请刷新重试");
+        }
+    } catch (error) {
+        console.error("❌ 初始化失败:", error);
+    }
+});
 
         // ================= 辅助函数 =================
         function addAddress(addr) {
