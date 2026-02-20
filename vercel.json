@@ -1,0 +1,17 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/fetch-stake-data",
+      "schedule": "0 */6 * * *"
+    }
+  ],
+  "buildCommand": "next build",
+  "outputDirectory": ".next",
+  "devCommand": "next dev",
+  "installCommand": "npm install",
+  "functions": {
+    "app/api/cron/fetch-stake-data/route.ts": {
+      "maxDuration": 60
+    }
+  }
+}
