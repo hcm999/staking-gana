@@ -9,48 +9,307 @@
     <!-- 引入 Ethers.js -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.0/ethers.umd.min.js"></script>
     <style>
-        /* 这里放之前的CSS样式，为了节省空间我就不重复了 */
-        /* 请复制之前提供的完整CSS样式 */
         body { 
             background-color: #0f172a; 
             color: #e2e8f0; 
-            font-family: 'Segoe UI', sans-serif;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             padding: 20px;
         }
-        /* ... 其他样式保持不变 ... */
+        
+        .container-fluid {
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+        
+        /* 统计卡片 */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+        
+        .stat-card {
+            background: linear-gradient(145deg, #1e293b, #0f172a);
+            border: 1px solid #334155;
+            border-radius: 16px;
+            padding: 20px 18px;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+        }
+        
+        .stat-title {
+            color: #94a3b8;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+        }
+        
+        .stat-value {
+            color: #38bdf8;
+            font-size: 1.8rem;
+            font-weight: bold;
+            font-family: 'Courier New', monospace;
+        }
+        
+        .stat-sub {
+            color: #4ade80;
+            font-size: 0.9rem;
+            display: flex;
+            justify-content: space-between;
+        }
+        
+        .stats-badge {
+            background-color: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 20px;
+            padding: 4px 12px;
+            font-size: 0.75rem;
+            color: #94a3b8;
+        }
+        
+        /* 周期标签 */
+        .badge-duration { 
+            padding: 4px 10px; 
+            border-radius: 20px; 
+            font-size: 0.75rem;
+            white-space: nowrap;
+            display: inline-block;
+            font-weight: 600;
+        }
+        
+        .badge-1d { 
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+            color: white; 
+        }
+        .badge-15d { 
+            background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+            color: white;
+        }
+        .badge-30d { 
+            background: linear-gradient(135deg, #ec4899, #db2777);
+            color: white;
+        }
+        
+        /* 表格样式 */
+        .table-container {
+            background: linear-gradient(145deg, #1e293b, #0f172a);
+            border-radius: 16px;
+            padding: 20px;
+            border: 1px solid #334155;
+            margin-top: 24px;
+        }
+        
+        .table { 
+            color: #e2e8f0; 
+            width: 100%;
+        }
+        
+        .table thead th { 
+            border-bottom: 2px solid #334155; 
+            color: #94a3b8; 
+            font-size: 0.8rem; 
+            padding: 16px 8px;
+            text-align: center;
+        }
+        
+        .table td { 
+            border-bottom: 1px solid #334155; 
+            padding: 14px 8px;
+            text-align: center;
+            vertical-align: middle;
+        }
+        
+        .address-cell {
+            font-family: 'Courier New', monospace;
+            color: #60a5fa;
+            cursor: pointer;
+        }
+        
+        .amount-cell {
+            font-family: 'Courier New', monospace;
+            color: #4ade80;
+            font-weight: 600;
+        }
+        
+        .time-two-lines {
+            display: flex;
+            flex-direction: column;
+            line-height: 1.5;
+        }
+        .time-date {
+            font-size: 0.8rem;
+            color: #94a3b8;
+        }
+        .time-clock {
+            font-size: 0.85rem;
+            font-family: 'Courier New', monospace;
+            color: #38bdf8;
+        }
+        
+        .status-unlocked { color: #4ade80; }
+        .status-locked { color: #f87171; }
+        
+        /* 地址输入区域 */
+        .address-input-area {
+            background: linear-gradient(145deg, #1e293b, #0f172a);
+            border: 1px solid #334155;
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 24px;
+        }
+        
+        .address-textarea {
+            background-color: #0f172a;
+            border: 1px solid #334155;
+            color: #e2e8f0;
+            font-family: 'Courier New', monospace;
+            width: 100%;
+            min-height: 150px;
+            padding: 16px;
+            border-radius: 12px;
+            margin-bottom: 16px;
+        }
+        
+        .address-textarea:focus {
+            outline: none;
+            border-color: #3b82f6;
+        }
+        
+        .btn-query {
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+            border: none;
+            padding: 14px 32px;
+            border-radius: 12px;
+            color: white;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        
+        .btn-query:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(37, 99, 235, 0.4);
+        }
+        
+        .btn-query:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .example-tags {
+            display: flex;
+            gap: 8px;
+            margin: 16px 0;
+            flex-wrap: wrap;
+        }
+        
+        .example-tag {
+            background-color: #1e293b;
+            border: 1px solid #334155;
+            color: #94a3b8;
+            padding: 6px 16px;
+            border-radius: 30px;
+            font-size: 0.8rem;
+            cursor: pointer;
+        }
+        
+        .example-tag:hover {
+            background: #3b82f6;
+            color: white;
+        }
+        
+        .progress-container {
+            margin-top: 20px;
+            padding: 16px;
+            background-color: #1e293b;
+            border-radius: 12px;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background-color: #334155;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+            transition: width 0.3s ease;
+        }
+        
+        .loading-text {
+            color: #38bdf8;
+            margin-top: 10px;
+            text-align: center;
+        }
+        
+        .header {
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #334155;
+        }
+        
+        .header h1 {
+            font-size: 2.2rem;
+            background: linear-gradient(135deg, #60a5fa, #c084fc);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .contract-address {
+            font-family: 'Courier New', monospace;
+            background: #1e293b;
+            border: 1px solid #334155;
+            padding: 10px 20px;
+            border-radius: 40px;
+            color: #60a5fa;
+            display: inline-block;
+            margin-top: 12px;
+        }
+        
+        .btn-export {
+            background-color: #334155;
+            border: 1px solid #475569;
+            padding: 8px 20px;
+            border-radius: 30px;
+            color: #e2e8f0;
+        }
+        
+        .btn-export:hover {
+            background-color: #3b82f6;
+            color: white;
+        }
     </style>
 </head>
 <body>
-    <!-- HTML结构保持不变 -->
     <div class="container-fluid">
         <!-- 头部 -->
-        <div class="header">
-            <h1>🔍 GANA 质押数据监控平台</h1>
-            <div class="subtitle">批量查询钱包质押记录 · 实时数据统计</div>
-            <div class="contract-address" id="stakingContractAddress">0x72212F35aC448FE7763aA1BFdb360193Fa098E52</div>
+        <div class="header d-flex justify-content-between align-items-start">
+            <div>
+                <h1>🔍 GANA 质押数据监控平台</h1>
+                <div class="contract-address" id="stakingContractAddress">0x72212F35aC448FE7763aA1BFdb360193Fa098E52</div>
+            </div>
         </div>
 
         <!-- 统计卡片 -->
         <div class="stats-grid">
-            <!-- 总质押金额 -->
             <div class="stat-card">
                 <div class="stat-title">📊 总质押金额</div>
                 <div class="stat-value" id="totalStaked">0.00</div>
                 <div class="stat-sub">USDT</div>
             </div>
-            <!-- 1天池 -->
             <div class="stat-card">
                 <div class="stat-title">📈 1天池总质押</div>
                 <div class="stat-value" id="totalStaked1d">0.00</div>
                 <div class="stat-sub">USDT <span class="stats-badge" id="count1d">0地址</span></div>
             </div>
-            <!-- 15天池 -->
             <div class="stat-card">
                 <div class="stat-title">📊 15天池总质押</div>
                 <div class="stat-value" id="totalStaked15d">0.00</div>
                 <div class="stat-sub">USDT <span class="stats-badge" id="count15d">0地址</span></div>
             </div>
-            <!-- 30天池 -->
             <div class="stat-card">
                 <div class="stat-title">📈 30天池总质押</div>
                 <div class="stat-value" id="totalStaked30d">0.00</div>
@@ -88,12 +347,12 @@
             <textarea id="addressList" class="address-textarea" placeholder="请输入钱包地址，每行一个">0x72212F35aC448FE7763aA1BFdb360193Fa098E52</textarea>
             
             <div class="example-tags">
-                <span class="example-tag" onclick="addExampleAddress('0x72212F35aC448FE7763aA1BFdb360193Fa098E52')">➕ 添加合约地址</span>
-                <span class="example-tag" onclick="addExampleAddress('0x55d398326f99059fF775485246999027B3197955')">➕ 添加USDT地址</span>
+                <span class="example-tag" onclick="addAddress('0x72212F35aC448FE7763aA1BFdb360193Fa098E52')">➕ 合约地址</span>
+                <span class="example-tag" onclick="addAddress('0x55d398326f99059fF775485246999027B3197955')">➕ USDT地址</span>
                 <span class="example-tag" onclick="clearAddresses()">🗑️ 清空</span>
             </div>
             
-            <button class="btn-query" onclick="batchQueryAddresses()" id="queryBtn">
+            <button class="btn-query" onclick="batchQuery()" id="queryBtn">
                 <span id="queryText">🔍 开始批量查询</span>
             </button>
             
@@ -108,9 +367,9 @@
 
         <!-- 结果表格 -->
         <div class="table-container">
-            <div class="d-flex justify-content-between">
+            <div class="d-flex justify-content-between mb-3">
                 <h5>📊 查询结果 <span id="resultCount" class="stats-badge">0条记录</span></h5>
-                <button class="btn-export" onclick="exportToCSV()">📥 导出CSV</button>
+                <button class="btn-export" onclick="exportCSV()">📥 导出CSV</button>
             </div>
             
             <div class="table-responsive">
@@ -128,7 +387,7 @@
                         </tr>
                     </thead>
                     <tbody id="resultTableBody">
-                        <tr><td colspan="8" class="text-center">请输入地址并查询</td></tr>
+                        <tr><td colspan="8" style="text-align:center; padding:50px; color:#64748b;">⚡ 请输入地址并点击查询</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -136,21 +395,21 @@
     </div>
 
     <script>
+        // ================= 完整ABI =================
+        const ABI_STAKING = [{"inputs":[{"internalType":"address","name":"marketingAddress_","type":"address"},{"internalType":"address","name":"devAddress_","type":"address"},{"internalType":"address","name":"threesevenAddress_","type":"address"}],"stateMutability":"nonpayable","type":"constructor"},{"inputs":[{"internalType":"uint256","name":"x","type":"uint256"},{"internalType":"uint256","name":"y","type":"uint256"}],"name":"PRBMath_MulDiv18_Overflow","type":"error"},{"inputs":[{"internalType":"uint256","name":"x","type":"uint256"},{"internalType":"uint256","name":"y","type":"uint256"},{"internalType":"uint256","name":"denominator","type":"uint256"}],"name":"PRBMath_MulDiv_Overflow","type":"error"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":true,"internalType":"address","name":"newOwner","type":"address"}],"name":"OwnershipTransferred","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"uint256","name":"reward","type":"uint256"},{"indexed":false,"internalType":"uint40","name":"timestamp","type":"uint40"},{"indexed":false,"internalType":"uint256","name":"index","type":"uint256"}],"name":"RewardPaid","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"timestamp","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"index","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"stakeTime","type":"uint256"}],"name":"Staked","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"from","type":"address"},{"indexed":true,"internalType":"address","name":"to","type":"address"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"}],"name":"Transfer","type":"event"},{"inputs":[],"name":"GANA","outputs":[{"internalType":"contract IGANA","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"MIN_STAKE_USDT","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"back_Fee","outputs":[{"internalType":"uint8","name":"","type":"uint8"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"account","type":"address"}],"name":"balanceOf","outputs":[{"internalType":"uint256","name":"balance","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"balances","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"decimals","outputs":[{"internalType":"uint8","name":"","type":"uint8"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"devAddress","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"user","type":"address"}],"name":"isPreacher","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"market_Fee","outputs":[{"internalType":"uint8","name":"","type":"uint8"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"marketingAddress","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"maxStakeAmount","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"name","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"network1In","outputs":[{"internalType":"uint256","name":"value","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"owner","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"user","type":"address"},{"internalType":"uint8","name":"index","type":"uint8"}],"name":"principalPlusRewardOfSlot","outputs":[{"internalType":"uint256","name":"reward","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"}],"name":"ratePerSec","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"_gana","type":"address"}],"name":"setGANA","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint160","name":"_amount","type":"uint160"},{"internalType":"uint256","name":"amountOutMin","type":"uint256"},{"internalType":"uint8","name":"_stakeIndex","type":"uint8"}],"name":"stake","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"user","type":"address"}],"name":"stakeCount","outputs":[{"internalType":"uint256","name":"count","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"symbol","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"sync","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"}],"name":"t_supply","outputs":[{"internalType":"uint40","name":"stakeTime","type":"uint40"},{"internalType":"uint160","name":"tamount","type":"uint160"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"threesevenAddress","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"threeseven_Fee","outputs":[{"internalType":"uint8","name":"","type":"uint8"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"totalSupply","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"newOwner","type":"address"}],"name":"transferOwnership","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"index","type":"uint256"}],"name":"unstake","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"userIndex","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"},{"internalType":"uint256","name":"","type":"uint256"}],"name":"userStakeRecord","outputs":[{"internalType":"uint40","name":"stakeTime","type":"uint40"},{"internalType":"uint160","name":"amount","type":"uint160"},{"internalType":"bool","name":"status","type":"bool"},{"internalType":"uint8","name":"stakeIndex","type":"uint8"}],"stateMutability":"view","type":"function"}];
+
         // ================= 配置 =================
         const CONFIG = {
             STAKING: "0x72212F35aC448FE7763aA1BFdb360193Fa098E52",
             MAX_ADDRESSES: 1000,
-            BATCH_SIZE: 20
+            BATCH_SIZE: 10
         };
         
         const STAKE_DURATIONS = {0: 86400, 1: 1296000, 2: 2592000};
         const STAKE_DURATION_LABELS = {0: "1天", 1: "15天", 2: "30天"};
         const STAKE_DURATION_CLASS = {0: "badge-1d", 1: "badge-15d", 2: "badge-30d"};
 
-        // ABI
-        const ABI_STAKING = [/* 这里放完整的ABI，为了节省空间省略，实际使用时要放完整 */];
-
-        // 全局变量
+        // ================= 全局变量 =================
         let stakingContract;
         let isQuerying = false;
         let queryResults = [];
@@ -160,50 +419,68 @@
             unlock2d: 0, unlock7d: 0, unlock15d: 0
         };
 
-        // 初始化
-        window.addEventListener('load', () => {
-            const provider = new ethers.JsonRpcProvider('/api/proxy');
-            stakingContract = new ethers.Contract(CONFIG.STAKING, ABI_STAKING, provider);
-            document.getElementById('stakingContractAddress').innerText = CONFIG.STAKING;
+        // ================= 初始化 =================
+        window.addEventListener('load', async () => {
+            try {
+                // 使用代理RPC
+                const provider = new ethers.JsonRpcProvider('/api/proxy');
+                stakingContract = new ethers.Contract(CONFIG.STAKING, ABI_STAKING, provider);
+                console.log("合约初始化成功");
+                document.getElementById('stakingContractAddress').innerText = CONFIG.STAKING;
+            } catch (error) {
+                console.error("初始化失败:", error);
+            }
         });
 
-        // 地址辅助函数
-        function addExampleAddress(addr) {
+        // ================= 辅助函数 =================
+        function addAddress(addr) {
             const ta = document.getElementById('addressList');
-            ta.value = ta.value.trim() + '\n' + addr;
+            ta.value = ta.value.trim() + (ta.value.trim() ? '\n' : '') + addr;
         }
 
         function clearAddresses() {
             document.getElementById('addressList').value = '';
         }
 
-        // 格式化函数
         function formatAmount(wei) {
-            return parseFloat(ethers.formatUnits(wei, 18)).toFixed(2);
+            try {
+                return parseFloat(ethers.formatUnits(wei, 18)).toFixed(2);
+            } catch {
+                return "0.00";
+            }
         }
 
         function formatTimeRemaining(seconds) {
             if (seconds <= 0) return "已解锁";
             const days = Math.floor(seconds / 86400);
             const hours = Math.floor((seconds % 86400) / 3600);
+            const minutes = Math.floor((seconds % 3600) / 60);
+            
             if (days > 0) return `${days}天${hours}小时`;
-            return `${hours}小时${Math.floor((seconds % 3600) / 60)}分`;
+            if (hours > 0) return `${hours}小时${minutes}分`;
+            return `${minutes}分`;
         }
 
-        function formatStakeTime(ts) {
-            const d = new Date(ts * 1000);
-            const now = new Date();
-            const diff = Math.floor((now - d) / 86400000);
-            const date = diff === 0 ? '今天' : diff === 1 ? '昨天' : `${d.getMonth()+1}/${d.getDate()}`;
-            const time = d.toTimeString().slice(0, 8);
-            return {date, time};
+        function formatStakeTime(timestamp) {
+            try {
+                const d = new Date(timestamp * 1000);
+                const now = new Date();
+                const diff = Math.floor((now - d) / (1000 * 60 * 60 * 24));
+                
+                let date = diff === 0 ? '今天' : diff === 1 ? '昨天' : `${d.getMonth()+1}/${d.getDate()}`;
+                let time = d.toLocaleTimeString('zh-CN', {hour12: false});
+                
+                return {date, time};
+            } catch {
+                return {date: '错误', time: '错误'};
+            }
         }
 
         function shortenAddress(addr) {
-            return addr.slice(0, 6) + '...' + addr.slice(-4);
+            return addr ? addr.slice(0, 6) + '...' + addr.slice(-4) : '';
         }
 
-        // 更新统计
+        // ================= 更新统计 =================
         function updateStats() {
             document.getElementById('totalStaked').innerText = stats.totalStaked.toFixed(2);
             document.getElementById('totalStaked1d').innerText = stats.totalStaked1d.toFixed(2);
@@ -219,124 +496,208 @@
             document.getElementById('resultCount').innerText = queryResults.length + '条记录';
         }
 
-        // 批量查询
-        async function batchQueryAddresses() {
-            if (!stakingContract) return alert("请等待合约初始化");
+        // ================= 批量查询 =================
+        async function batchQuery() {
+            if (!stakingContract) {
+                alert("合约未初始化，请稍后重试");
+                return;
+            }
+            
             if (isQuerying) return;
 
-            const addresses = document.getElementById('addressList').value.split('\n')
-                .map(l => l.trim()).filter(l => l.startsWith('0x') && l.length === 42);
+            // 解析地址
+            const text = document.getElementById('addressList').value;
+            const addresses = text.split('\n')
+                .map(l => l.trim())
+                .filter(l => l.startsWith('0x') && l.length === 42);
             
-            if (!addresses.length) return alert("没有有效地址");
-            if (addresses.length > CONFIG.MAX_ADDRESSES) 
-                return alert(`最多${CONFIG.MAX_ADDRESSES}个地址`);
+            if (addresses.length === 0) {
+                alert("没有有效的钱包地址");
+                return;
+            }
+            
+            if (addresses.length > CONFIG.MAX_ADDRESSES) {
+                alert(`最多支持 ${CONFIG.MAX_ADDRESSES} 个地址`);
+                return;
+            }
 
+            // 重置状态
             isQuerying = true;
             queryResults = [];
-            stats = {totalStaked:0, totalStaked1d:0, totalStaked15d:0, totalStaked30d:0,
-                     count1d:0, count15d:0, count30d:0, unlock2d:0, unlock7d:0, unlock15d:0};
+            stats = {
+                totalStaked: 0, totalStaked1d: 0, totalStaked15d: 0, totalStaked30d: 0,
+                count1d: 0, count15d: 0, count30d: 0,
+                unlock2d: 0, unlock7d: 0, unlock15d: 0
+            };
 
+            // 更新UI
             document.getElementById('queryText').innerHTML = '⏳ 查询中...';
             document.getElementById('queryBtn').disabled = true;
             document.getElementById('progressContainer').style.display = 'block';
+            document.getElementById('progressFill').style.width = '0%';
 
             const now = Math.floor(Date.now() / 1000);
             const limits = {
-                '2d': now + 172800, '7d': now + 604800, '15d': now + 1296000
+                '2d': now + 2 * 86400,
+                '7d': now + 7 * 86400,
+                '15d': now + 15 * 86400
             };
 
             let processed = 0;
+
+            // 分批查询
             for (let i = 0; i < addresses.length; i += CONFIG.BATCH_SIZE) {
                 const batch = addresses.slice(i, i + CONFIG.BATCH_SIZE);
-                const batchResults = await Promise.all(batch.map(async addr => {
+                
+                // 并发查询这一批
+                const promises = batch.map(async (address) => {
                     try {
-                        const count = await stakingContract.stakeCount(addr);
+                        const count = await stakingContract.stakeCount(address);
                         const records = [];
+                        
                         for (let j = 0; j < Number(count); j++) {
-                            const r = await stakingContract.userStakeRecord(addr, j);
-                            if (!r[2]) { // 活跃
-                                const amount = parseFloat(ethers.formatUnits(r[1], 18));
-                                const unlock = Number(r[0]) + STAKE_DURATIONS[Number(r[3])];
-                                records.push({
-                                    address: addr, amount,
-                                    stakeTime: Number(r[0]),
-                                    stakeIndex: Number(r[3]),
-                                    unlockTime: unlock,
-                                    timeRemaining: unlock - now
-                                });
+                            try {
+                                const record = await stakingContract.userStakeRecord(address, j);
+                                // record[0]: stakeTime, record[1]: amount, record[2]: status, record[3]: stakeIndex
+                                const stakeTime = Number(record[0]);
+                                const amount = record[1];
+                                const isActive = record[2];
+                                const stakeIndex = Number(record[3]);
                                 
-                                stats.totalStaked += amount;
-                                if (r[3] == 0) { stats.totalStaked1d += amount; stats.count1d++; }
-                                else if (r[3] == 1) { stats.totalStaked15d += amount; stats.count15d++; }
-                                else { stats.totalStaked30d += amount; stats.count30d++; }
-                                
-                                if (unlock <= limits['2d']) stats.unlock2d += amount;
-                                if (unlock <= limits['7d']) stats.unlock7d += amount;
-                                if (unlock <= limits['15d']) stats.unlock15d += amount;
+                                if (!isActive) { // 只统计活跃的
+                                    const amountNum = parseFloat(ethers.formatUnits(amount, 18));
+                                    const unlockTime = stakeTime + STAKE_DURATIONS[stakeIndex];
+                                    const timeRemaining = unlockTime - now;
+                                    
+                                    records.push({
+                                        address,
+                                        amount: amountNum,
+                                        stakeTime,
+                                        stakeIndex,
+                                        unlockTime,
+                                        timeRemaining
+                                    });
+                                    
+                                    // 更新统计
+                                    stats.totalStaked += amountNum;
+                                    
+                                    if (stakeIndex === 0) {
+                                        stats.totalStaked1d += amountNum;
+                                        stats.count1d++;
+                                    } else if (stakeIndex === 1) {
+                                        stats.totalStaked15d += amountNum;
+                                        stats.count15d++;
+                                    } else {
+                                        stats.totalStaked30d += amountNum;
+                                        stats.count30d++;
+                                    }
+                                    
+                                    if (unlockTime <= limits['2d']) stats.unlock2d += amountNum;
+                                    if (unlockTime <= limits['7d']) stats.unlock7d += amountNum;
+                                    if (unlockTime <= limits['15d']) stats.unlock15d += amountNum;
+                                }
+                            } catch (e) {
+                                console.log(`读取记录失败: ${address}[${j}]`, e);
                             }
                         }
                         return records;
-                    } catch { return []; }
-                }));
+                    } catch (e) {
+                        console.log(`查询地址失败: ${address}`, e);
+                        return [];
+                    }
+                });
 
-                batchResults.forEach(r => queryResults.push(...r));
+                const batchResults = await Promise.all(promises);
+                batchResults.forEach(records => {
+                    queryResults.push(...records);
+                });
+
                 processed += batch.length;
-                document.getElementById('progressFill').style.width = 
-                    Math.round(processed / addresses.length * 100) + '%';
+                const progress = Math.round((processed / addresses.length) * 100);
+                document.getElementById('progressFill').style.width = progress + '%';
                 document.getElementById('progressText').innerHTML = 
-                    `查询中 ${processed}/${addresses.length} (找到 ${queryResults.length} 条)`;
+                    `查询中 ${processed}/${addresses.length} (找到 ${queryResults.length} 条记录)`;
+                
+                // 实时更新统计
                 updateStats();
-                await new Promise(r => setTimeout(r, 50));
+                
+                // 小延迟避免请求过密
+                await new Promise(r => setTimeout(r, 100));
             }
 
-            queryResults.sort((a,b) => b.stakeTime - a.stakeTime);
-            
+            // 按时间倒序
+            queryResults.sort((a, b) => b.stakeTime - a.stakeTime);
+
             // 渲染表格
             const tbody = document.getElementById('resultTableBody');
-            tbody.innerHTML = queryResults.map((r, i) => {
-                const t = formatStakeTime(r.stakeTime);
-                const u = formatStakeTime(r.unlockTime);
-                const status = r.timeRemaining <= 0 ? '可赎回' : '锁仓中';
-                const cls = r.timeRemaining <= 0 ? 'status-unlocked' : 'status-locked';
-                return `<tr>
-                    <td>${i+1}</td>
-                    <td class="address-cell" title="${r.address}">${shortenAddress(r.address)}</td>
-                    <td class="amount-cell">${r.amount.toFixed(2)}</td>
-                    <td><span class="badge-duration ${STAKE_DURATION_CLASS[r.stakeIndex]}">${STAKE_DURATION_LABELS[r.stakeIndex]}</span></td>
-                    <td><div class="time-two-lines"><span class="time-date">${t.date}</span><span class="time-clock">${t.time}</span></div></td>
-                    <td><div class="time-two-lines"><span class="time-date">${u.date}</span><span class="time-clock">${u.time}</span></div></td>
-                    <td class="${cls}">${r.timeRemaining <= 0 ? '已解锁' : formatTimeRemaining(r.timeRemaining)}</td>
-                    <td class="${cls}">${status}</td>
-                </tr>`;
-            }).join('');
+            if (queryResults.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:50px;">📭 没有找到质押记录</td></tr>';
+            } else {
+                tbody.innerHTML = queryResults.map((r, i) => {
+                    const stake = formatStakeTime(r.stakeTime);
+                    const unlock = formatStakeTime(r.unlockTime);
+                    const status = r.timeRemaining <= 0 ? '可赎回' : '锁仓中';
+                    const statusClass = r.timeRemaining <= 0 ? 'status-unlocked' : 'status-locked';
+                    const timeRemainingText = r.timeRemaining <= 0 ? '已解锁' : formatTimeRemaining(r.timeRemaining);
+                    
+                    return `<tr>
+                        <td>${i+1}</td>
+                        <td class="address-cell" title="${r.address}" onclick="navigator.clipboard.writeText('${r.address}')">${shortenAddress(r.address)}</td>
+                        <td class="amount-cell">${r.amount.toFixed(2)}</td>
+                        <td><span class="badge-duration ${STAKE_DURATION_CLASS[r.stakeIndex]}">${STAKE_DURATION_LABELS[r.stakeIndex]}</span></td>
+                        <td><div class="time-two-lines"><span class="time-date">${stake.date}</span><span class="time-clock">${stake.time}</span></div></td>
+                        <td><div class="time-two-lines"><span class="time-date">${unlock.date}</span><span class="time-clock">${unlock.time}</span></div></td>
+                        <td class="${statusClass}">${timeRemainingText}</td>
+                        <td class="${statusClass}">${status}</td>
+                    </tr>`;
+                }).join('');
+            }
 
             updateStats();
+
+            // 恢复按钮
             document.getElementById('queryText').innerHTML = '✅ 查询完成';
             setTimeout(() => {
                 document.getElementById('queryText').innerHTML = '🔍 开始批量查询';
                 document.getElementById('queryBtn').disabled = false;
                 document.getElementById('progressContainer').style.display = 'none';
             }, 2000);
+            
             isQuerying = false;
         }
 
-        // 导出CSV
-        function exportToCSV() {
-            if (!queryResults.length) return alert("没有数据");
-            const csv = ["序号,地址,金额,周期,质押时间,解锁时间,剩余时间,状态"];
-            queryResults.forEach((r,i) => {
-                const t = new Date(r.stakeTime*1000).toLocaleString();
-                const u = new Date(r.unlockTime*1000).toLocaleString();
+        // ================= 导出CSV =================
+        function exportCSV() {
+            if (queryResults.length === 0) {
+                alert("没有数据可导出");
+                return;
+            }
+
+            const headers = ['序号', '钱包地址', '质押金额', '质押周期', '质押时间', '解锁时间', '剩余时间', '状态'];
+            const rows = queryResults.map((r, i) => {
+                const stakeTime = new Date(r.stakeTime * 1000).toLocaleString();
+                const unlockTime = new Date(r.unlockTime * 1000).toLocaleString();
                 const status = r.timeRemaining <= 0 ? '可赎回' : '锁仓中';
-                const remain = r.timeRemaining <= 0 ? '已解锁' : formatTimeRemaining(r.timeRemaining);
-                csv.push(`${i+1},${r.address},${r.amount.toFixed(2)},${STAKE_DURATION_LABELS[r.stakeIndex]},${t},${u},${remain},${status}`);
+                const remaining = r.timeRemaining <= 0 ? '已解锁' : formatTimeRemaining(r.timeRemaining);
+                
+                return [
+                    i+1,
+                    r.address,
+                    r.amount.toFixed(2),
+                    STAKE_DURATION_LABELS[r.stakeIndex],
+                    stakeTime,
+                    unlockTime,
+                    remaining,
+                    status
+                ];
             });
-            
-            const blob = new Blob(["\uFEFF" + csv.join('\n')], {type: 'text/csv'});
-            const a = document.createElement('a');
-            a.href = URL.createObjectURL(blob);
-            a.download = `质押数据_${new Date().toLocaleDateString()}.csv`;
-            a.click();
+
+            const csv = [headers, ...rows].map(row => row.join(',')).join('\n');
+            const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `质押数据_${new Date().toLocaleDateString()}.csv`;
+            link.click();
         }
     </script>
 </body>
