@@ -654,188 +654,204 @@
         }
 
         // ================= 批量查询 =================
-        async function batchQuery() {
-            if (!stakingContract) {
-                alert("❌ 合约未初始化，请稍后重试");
-                return;
-            }
-            
-            if (isQuerying) return;
+async function batchQuery() {
+    if (!stakingContract) {
+        alert("❌ 合约未初始化，请稍后重试");
+        return;
+    }
+    
+    if (isQuerying) return;
 
-            // 解析地址
-            const text = document.getElementById('addressList').value;
-            const addresses = text.split('\n')
-                .map(l => l.trim())
-                .filter(l => l.startsWith('0x') && l.length === 42);
-            
-            if (addresses.length === 0) {
-                alert("❌ 没有有效的钱包地址");
-                return;
-            }
-            
-            if (addresses.length > CONFIG.MAX_ADDRESSES) {
-                alert(`❌ 最多支持 ${CONFIG.MAX_ADDRESSES} 个地址`);
-                return;
-            }
+    // 解析地址
+    const text = document.getElementById('addressList').value;
+    const addresses = text.split('\n')
+        .map(l => l.trim())
+        .filter(l => l.startsWith('0x') && l.length === 42);
+    
+    if (addresses.length === 0) {
+        alert("❌ 没有有效的钱包地址");
+        return;
+    }
+    
+    if (addresses.length > CONFIG.MAX_ADDRESSES) {
+        alert(`❌ 最多支持 ${CONFIG.MAX_ADDRESSES} 个地址`);
+        return;
+    }
 
-            // 重置状态
-            isQuerying = true;
-            queryResults = [];
-            stats = {
-                totalStaked: 0, totalStaked1d: 0, totalStaked15d: 0, totalStaked30d: 0,
-                count1d: 0, count15d: 0, count30d: 0,
-                unlock2d: 0, unlock7d: 0, unlock15d: 0
-            };
+    // 重置状态
+    isQuerying = true;
+    queryResults = [];
+    stats = {
+        totalStaked: 0, totalStaked1d: 0, totalStaked15d: 0, totalStaked30d: 0,
+        count1d: 0, count15d: 0, count30d: 0,
+        unlock2d: 0, unlock7d: 0, unlock15d: 0
+    };
 
-            // 更新UI
-            document.getElementById('queryText').innerHTML = '⏳ 查询中...';
-            document.getElementById('queryBtn').disabled = true;
-            document.getElementById('progressContainer').style.display = 'block';
-            document.getElementById('progressFill').style.width = '0%';
+    // 更新UI
+    document.getElementById('queryText').innerHTML = '⏳ 查询中...';
+    document.getElementById('queryBtn').disabled = true;
+    document.getElementById('progressContainer').style.display = 'block';
+    document.getElementById('progressFill').style.width = '0%';
 
-            const now = Math.floor(Date.now() / 1000);
-            const limits = {
-                '2d': now + 2 * 86400,
-                '7d': now + 7 * 86400,
-                '15d': now + 15 * 86400
-            };
+    const now = Math.floor(Date.now() / 1000);
+    const limits = {
+        '2d': now + 2 * 86400,
+        '7d': now + 7 * 86400,
+        '15d': now + 15 * 86400
+    };
 
-            let processed = 0;
-            let totalRecords = 0;
+    let processed = 0;
+    let totalRecords = 0;
 
-            console.log("🔍 开始查询，地址数量:", addresses.length);
+    console.log("🔍 开始查询，地址数量:", addresses.length);
+    console.log("当前时间戳:", now);
 
-            // 分批查询
-            for (let i = 0; i < addresses.length; i += CONFIG.BATCH_SIZE) {
-                const batch = addresses.slice(i, i + CONFIG.BATCH_SIZE);
+    // 分批查询
+    for (let i = 0; i < addresses.length; i += CONFIG.BATCH_SIZE) {
+        const batch = addresses.slice(i, i + CONFIG.BATCH_SIZE);
+        
+        // 并发查询这一批
+        const promises = batch.map(async (address) => {
+            try {
+                const count = await stakingContract.stakeCount(address);
+                console.log(`地址 ${address} 的质押数量:`, count.toString());
                 
-                // 并发查询这一批
-                const promises = batch.map(async (address) => {
+                const records = [];
+                
+                for (let j = 0; j < Number(count); j++) {
                     try {
-                        const count = await stakingContract.stakeCount(address);
-                        console.log(`地址 ${address} 的质押数量:`, count.toString());
+                        const record = await stakingContract.userStakeRecord(address, j);
                         
-                        const records = [];
+                        // 打印原始数据以便调试
+                        console.log(`原始记录 ${address}[${j}]:`, record);
                         
-                        for (let j = 0; j < Number(count); j++) {
-                            try {
-                                const record = await stakingContract.userStakeRecord(address, j);
-                                // record[0]: stakeTime
-                                // record[1]: amount
-                                // record[2]: status (true=已赎回, false=活跃)
-                                // record[3]: stakeIndex
-                                
-                                const stakeTime = Number(record[0]);
-                                const amount = record[1];
-                                const isRedeemed = record[2];  // true=已赎回
-                                const stakeIndex = Number(record[3]);
-                                
-                                // 只统计活跃的（isRedeemed == false）
-                                if (!isRedeemed) {
-                                    const amountNum = parseFloat(ethers.formatUnits(amount, 18));
-                                    const unlockTime = stakeTime + STAKE_DURATIONS[stakeIndex];
-                                    const timeRemaining = unlockTime - now;
-                                    
-                                    records.push({
-                                        address,
-                                        amount: amountNum,
-                                        stakeTime,
-                                        stakeIndex,
-                                        unlockTime,
-                                        timeRemaining
-                                    });
-                                    
-                                    // 更新统计
-                                    stats.totalStaked += amountNum;
-                                    
-                                    if (stakeIndex === 0) {
-                                        stats.totalStaked1d += amountNum;
-                                        stats.count1d++;
-                                    } else if (stakeIndex === 1) {
-                                        stats.totalStaked15d += amountNum;
-                                        stats.count15d++;
-                                    } else if (stakeIndex === 2) {
-                                        stats.totalStaked30d += amountNum;
-                                        stats.count30d++;
-                                    }
-                                    
-                                    if (unlockTime <= limits['2d']) stats.unlock2d += amountNum;
-                                    if (unlockTime <= limits['7d']) stats.unlock7d += amountNum;
-                                    if (unlockTime <= limits['15d']) stats.unlock15d += amountNum;
-                                }
-                            } catch (e) {
-                                console.log(`⚠️ 读取记录失败: ${address}[${j}]`, e);
+                        // 正确获取元组中的值
+                        const stakeTime = Number(record[0]);      // uint40 -> number
+                        const amount = record[1];                 // uint160
+                        const isRedeemed = record[2];             // bool - true=已赎回
+                        const stakeIndex = Number(record[3]);     // uint8 -> number
+                        
+                        console.log(`解析后 ${address}[${j}]:`, {
+                            stakeTime,
+                            amount: ethers.formatUnits(amount, 18),
+                            isRedeemed,
+                            stakeIndex
+                        });
+                        
+                        // 只统计活跃的（isRedeemed == false）
+                        if (!isRedeemed) {
+                            const amountNum = parseFloat(ethers.formatUnits(amount, 18));
+                            const duration = STAKE_DURATIONS[stakeIndex];
+                            const unlockTime = stakeTime + duration;
+                            const timeRemaining = unlockTime - now;
+                            
+                            console.log(`活跃记录:`, {
+                                amount: amountNum,
+                                duration,
+                                unlockTime,
+                                timeRemaining
+                            });
+                            
+                            records.push({
+                                address,
+                                amount: amountNum,
+                                stakeTime,
+                                stakeIndex,
+                                unlockTime,
+                                timeRemaining
+                            });
+                            
+                            // 更新统计
+                            stats.totalStaked += amountNum;
+                            
+                            if (stakeIndex === 0) {
+                                stats.totalStaked1d += amountNum;
+                                stats.count1d++;
+                            } else if (stakeIndex === 1) {
+                                stats.totalStaked15d += amountNum;
+                                stats.count15d++;
+                            } else if (stakeIndex === 2) {
+                                stats.totalStaked30d += amountNum;
+                                stats.count30d++;
                             }
+                            
+                            if (unlockTime <= limits['2d']) stats.unlock2d += amountNum;
+                            if (unlockTime <= limits['7d']) stats.unlock7d += amountNum;
+                            if (unlockTime <= limits['15d']) stats.unlock15d += amountNum;
                         }
-                        return records;
                     } catch (e) {
-                        console.log(`⚠️ 查询地址失败: ${address}`, e);
-                        return [];
+                        console.log(`⚠️ 读取记录失败: ${address}[${j}]`, e);
                     }
-                });
-
-                const batchResults = await Promise.all(promises);
-                batchResults.forEach(records => {
-                    queryResults.push(...records);
-                    totalRecords += records.length;
-                });
-
-                processed += batch.length;
-                const progress = Math.round((processed / addresses.length) * 100);
-                document.getElementById('progressFill').style.width = progress + '%';
-                document.getElementById('progressText').innerHTML = 
-                    `查询中 ${processed}/${addresses.length} (找到 ${totalRecords} 条记录)`;
-                
-                // 实时更新统计
-                updateStats();
-                
-                // 小延迟避免请求过密
-                await new Promise(r => setTimeout(r, 100));
+                }
+                return records;
+            } catch (e) {
+                console.log(`⚠️ 查询地址失败: ${address}`, e);
+                return [];
             }
+        });
 
-            console.log("✅ 查询完成，总记录数:", totalRecords);
-            console.log("📊 统计结果:", stats);
+        const batchResults = await Promise.all(promises);
+        batchResults.forEach(records => {
+            queryResults.push(...records);
+            totalRecords += records.length;
+        });
 
-            // 按时间倒序
-            queryResults.sort((a, b) => b.stakeTime - a.stakeTime);
+        processed += batch.length;
+        const progress = Math.round((processed / addresses.length) * 100);
+        document.getElementById('progressFill').style.width = progress + '%';
+        document.getElementById('progressText').innerHTML = 
+            `查询中 ${processed}/${addresses.length} (找到 ${totalRecords} 条记录)`;
+        
+        // 实时更新统计
+        updateStats();
+        
+        // 小延迟避免请求过密
+        await new Promise(r => setTimeout(r, 100));
+    }
 
-            // 渲染表格
-            const tbody = document.getElementById('resultTableBody');
-            if (queryResults.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="8" class="empty-state">📭 没有找到活跃的质押记录</td></tr>';
-            } else {
-                tbody.innerHTML = queryResults.map((r, i) => {
-                    const stake = formatStakeTime(r.stakeTime);
-                    const unlock = formatStakeTime(r.unlockTime);
-                    const status = r.timeRemaining <= 0 ? '可赎回' : '锁仓中';
-                    const statusClass = r.timeRemaining <= 0 ? 'status-unlocked' : 'status-locked';
-                    const timeRemainingText = r.timeRemaining <= 0 ? '已解锁' : formatTimeRemaining(r.timeRemaining);
-                    
-                    return `<tr>
-                        <td>${i+1}</td>
-                        <td class="address-cell" title="${r.address}" onclick="navigator.clipboard.writeText('${r.address}')">${shortenAddress(r.address)}</td>
-                        <td class="amount-cell">${r.amount.toFixed(2)}</td>
-                        <td><span class="badge-duration ${STAKE_DURATION_CLASS[r.stakeIndex]}">${STAKE_DURATION_LABELS[r.stakeIndex]}</span></td>
-                        <td><div class="time-two-lines"><span class="time-date">${stake.date}</span><span class="time-clock">${stake.time}</span></div></td>
-                        <td><div class="time-two-lines"><span class="time-date">${unlock.date}</span><span class="time-clock">${unlock.time}</span></div></td>
-                        <td class="${statusClass}">${timeRemainingText}</td>
-                        <td class="${statusClass}">${status}</td>
-                    </tr>`;
-                }).join('');
-            }
+    console.log("✅ 查询完成，总记录数:", totalRecords);
+    console.log("📊 统计结果:", stats);
 
-            updateStats();
+    // 按时间倒序
+    queryResults.sort((a, b) => b.stakeTime - a.stakeTime);
 
-            // 恢复按钮
-            document.getElementById('queryText').innerHTML = '✅ 查询完成';
-            setTimeout(() => {
-                document.getElementById('queryText').innerHTML = '🔍 开始批量查询';
-                document.getElementById('queryBtn').disabled = false;
-                document.getElementById('progressContainer').style.display = 'none';
-            }, 2000);
+    // 渲染表格
+    const tbody = document.getElementById('resultTableBody');
+    if (queryResults.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" class="empty-state">📭 没有找到活跃的质押记录</td></tr>';
+    } else {
+        tbody.innerHTML = queryResults.map((r, i) => {
+            const stake = formatStakeTime(r.stakeTime);
+            const unlock = formatStakeTime(r.unlockTime);
+            const status = r.timeRemaining <= 0 ? '可赎回' : '锁仓中';
+            const statusClass = r.timeRemaining <= 0 ? 'status-unlocked' : 'status-locked';
+            const timeRemainingText = r.timeRemaining <= 0 ? '已解锁' : formatTimeRemaining(r.timeRemaining);
             
-            isQuerying = false;
-        }
+            return `<tr>
+                <td>${i+1}</td>
+                <td class="address-cell" title="${r.address}" onclick="navigator.clipboard.writeText('${r.address}')">${shortenAddress(r.address)}</td>
+                <td class="amount-cell">${r.amount.toFixed(2)}</td>
+                <td><span class="badge-duration ${STAKE_DURATION_CLASS[r.stakeIndex]}">${STAKE_DURATION_LABELS[r.stakeIndex]}</span></td>
+                <td><div class="time-two-lines"><span class="time-date">${stake.date}</span><span class="time-clock">${stake.time}</span></div></td>
+                <td><div class="time-two-lines"><span class="time-date">${unlock.date}</span><span class="time-clock">${unlock.time}</span></div></td>
+                <td class="${statusClass}">${timeRemainingText}</td>
+                <td class="${statusClass}">${status}</td>
+            </tr>`;
+        }).join('');
+    }
+
+    updateStats();
+
+    // 恢复按钮
+    document.getElementById('queryText').innerHTML = '✅ 查询完成';
+    setTimeout(() => {
+        document.getElementById('queryText').innerHTML = '🔍 开始批量查询';
+        document.getElementById('queryBtn').disabled = false;
+        document.getElementById('progressContainer').style.display = 'none';
+    }, 2000);
+    
+    isQuerying = false;
+}
 
         // ================= 导出CSV =================
         function exportCSV() {
