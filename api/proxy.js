@@ -14,7 +14,7 @@ const RPC_NODES = [
 const cache = new Map();
 const CACHE_TTL = 30000; // 30秒缓存
 
-// 获取随机节点（带权重，避免单节点过载）
+// 获取随机节点
 function getRandomNode() {
   return RPC_NODES[Math.floor(Math.random() * RPC_NODES.length)];
 }
@@ -60,10 +60,10 @@ export default async function handler(req, res) {
   try {
     const { method, params, id = 1 } = req.body;
     
-    // 生成缓存键（只缓存eth_call和eth_getLogs）
+    // 生成缓存键
     const cacheKey = `${method}_${JSON.stringify(params)}`;
     
-    // 检查缓存（只对读操作缓存）
+    // 检查缓存
     if (method === 'eth_call' || method === 'eth_getLogs' || method === 'eth_getBlockByNumber') {
       const cached = cache.get(cacheKey);
       if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
@@ -94,7 +94,7 @@ export default async function handler(req, res) {
     
     // 检查是否有错误
     if (data.error) {
-      console.error(`[代理] RPC错误 (${rpcUrl}):`, data.error);
+      console.error(`[代理] RPC错误:`, data.error);
       
       // 如果是限流错误，尝试使用另一个节点重试一次
       if (data.error.message?.includes('limit') || 
@@ -119,7 +119,7 @@ export default async function handler(req, res) {
           const retryData = await retryResponse.json();
           
           // 重试成功，可以缓存
-          if (!retryData.error && (method === 'eth_call' || method === 'eth_getLogs')) {
+          if (!retryData.error) {
             cache.set(cacheKey, {
               data: retryData,
               timestamp: Date.now()
@@ -141,7 +141,7 @@ export default async function handler(req, res) {
       });
     }
 
-    // 可以缓存的请求存入缓存
+    // 存入缓存
     if (method === 'eth_call' || method === 'eth_getLogs') {
       cache.set(cacheKey, {
         data: data,
