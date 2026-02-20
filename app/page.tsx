@@ -307,23 +307,23 @@ export default function Dashboard() {
             </LineChart>
           </ResponsiveContainer>
         </div>
-      </卡片>
+      </Card>
 
       {/* 每日明细表格 */}
       <Card>
         <h2 className="text-lg font-semibold mb-4">每日明细</h2>
         <div className="overflow-x-auto">
-          <表格>
-            <表头>
+          <Table>
+            <thead>
               <tr className="bg-gray-50">
                 <th className="px-4 py-2 text-left">日期</th>
                 <th className="px-4 py-2 text-right">当天新增质押 (USDT)</th>
                 <th className="px-4 py-2 text-right">当天解押 (USDT)</th>
                 <th className="px-4 py-2 text-right">净新增 (USDT)</th>
                 <th className="px-4 py-2 text-right">仍在质押 (USDT)</th>
-              </行>
-            </表头>
-            <主体>
+              </tr>
+            </thead>
+            <tbody>
               {data?.details.map((item) => (
                 <tr key={item.date} className="border-t">
                   <td className="px-4 py-2">{item.date}</td>
@@ -331,14 +331,14 @@ export default function Dashboard() {
                   <td className="px-4 py-2 text-right">{formatNumber(item.newUnstake)}</td>
                   <td className="px-4 py-2 text-right font-medium text-green-600">
                     {formatNumber(item.newStake - item.newUnstake)}
-                  </单元格>
+                  </td>
                   <td className="px-4 py-2 text-right">{formatNumber(item.activeStake)}</td>
-                </行>
+                </tr>
               ))}
-            </主体>
-          </表格>
+            </tbody>
+          </Table>
         </div>
-      </卡片>
+      </Card>
     </div>
   );
 }
