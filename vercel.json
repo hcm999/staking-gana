@@ -6,14 +6,14 @@
       "memory": 1024
     }
   },
-  "routes": [
+  "rewrites": [
     {
-      "src": "/api/proxy",
-      "dest": "/api/proxy.js"
+      "source": "/api/proxy",
+      "destination": "/api/proxy.js"
     },
     {
-      "src": "/(.*)",
-      "dest": "/public/index.html"
+      "source": "/(.*)",
+      "destination": "/public/index.html"
     }
   ],
   "headers": [
@@ -31,8 +31,13 @@
         {
           "key": "Access-Control-Allow-Headers",
           "value": "X-Requested-With, Content-Type, Accept"
+        },
+        {
+          "key": "Access-Control-Max-Age",
+          "value": "86400"
         }
       ]
     }
-  ]
+  ],
+  "cleanUrls": true
 }
