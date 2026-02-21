@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
-    <title>GANA质押数据监控平台 + 图表(默认0点/90天选项)</title>
+    <title>GANA质押数据监控平台 + 移动端优化</title>
     <!-- 引入 Bootstrap 用于快速布局 -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- 引入 Chart.js 轻量图表库 -->
@@ -553,6 +553,7 @@
         .chart-range-selector {
             display: flex;
             gap: 8px;
+            flex-wrap: wrap;
         }
         .range-btn {
             background-color: #334155;
@@ -574,6 +575,17 @@
             height: 260px;
             width: 100%;
         }
+        
+        /* 移动端提示样式 */
+        .mobile-hint {
+            background-color: #334155;
+            color: #fbbf24;
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            margin-bottom: 12px;
+            text-align: center;
+        }
     </style>
 </head>
 <body>
@@ -581,9 +593,12 @@
         <!-- 头部 -->
         <div class="header">
             <h1>🔍 GANA 质押数据监控平台 <span id="queryMode" class="query-mode mode-cached">缓存数据</span></h1>
-            <div class="subtitle">批量查询 · 增量更新 · 数据持久化 · 图表范围可选(7/15/30/90天)</div>
+            <div class="subtitle">批量查询 · 增量更新 · 数据持久化 · 移动端优化</div>
             <div class="contract-address" id="stakingContractAddress">0x72212F35aC448FE7763aA1BFdb360193Fa098E52</div>
         </div>
+
+        <!-- 移动端提示区域 -->
+        <div id="mobileHint" class="mobile-hint" style="display: none;"></div>
 
         <!-- 统计卡片 - 第一行 -->
         <div class="stats-grid">
@@ -639,7 +654,7 @@
             </div>
         </div>
 
-        <!-- 配置面板：每日统计起始时间 (默认改为0点) -->
+        <!-- 配置面板：每日统计起始时间 (默认0点) -->
         <div class="config-panel">
             <div class="config-row">
                 <span class="config-label">📅 每日统计起始时间：</span>
@@ -665,7 +680,7 @@
             </div>
         </div>
 
-        <!-- 地址输入区域 (简化测试地址) -->
+        <!-- 地址输入区域 -->
         <div class="address-input-area">
             <textarea id="addressList" class="address-textarea" placeholder="每行一个地址，最多5000个&#10;例如：&#10;0x72212F35aC448FE7763aA1BFdb360193Fa098E52">0x72212F35aC448FE7763aA1BFdb360193Fa098E52</textarea>
             
@@ -700,7 +715,7 @@
             </div>
         </div>
 
-        <!-- 数据选项卡 (新增 图表 选项) -->
+        <!-- 数据选项卡 -->
         <div class="data-tabs">
             <span class="data-tab active" onclick="switchDataTab('records')" id="tab-records">📋 质押记录</span>
             <span class="data-tab" onclick="switchDataTab('daily')" id="tab-daily">📅 每日统计</span>
@@ -777,10 +792,10 @@
             </div>
         </div>
 
-        <!-- 新增图表面板 (带范围选择: 7/15/30/90天) -->
+        <!-- 图表面板 -->
         <div id="panel-charts" class="data-panel">
             <div class="chart-grid">
-                <!-- 每日新增质押趋势图 (带范围切换) -->
+                <!-- 每日新增质押趋势图 -->
                 <div class="chart-card">
                     <div class="chart-title">
                         <span>📈 每日新增质押趋势</span>
@@ -795,7 +810,7 @@
                         <canvas id="trendChart"></canvas>
                     </div>
                 </div>
-                <!-- 各周期质押分布图 (饼图) -->
+                <!-- 各周期质押分布图 -->
                 <div class="chart-card">
                     <div class="chart-title">🥧 各周期质押分布 (当前活跃)</div>
                     <div class="chart-container">
@@ -803,7 +818,7 @@
                     </div>
                 </div>
             </div>
-            <!-- 额外: 解锁时间分布柱状图 -->
+            <!-- 解锁时间分布 -->
             <div class="chart-card" style="margin-top:16px;">
                 <div class="chart-title">⏳ 解锁时间分布 (未来可赎回)</div>
                 <div class="chart-container" style="height:200px;">
@@ -814,7 +829,7 @@
     </div>
 
     <script>
-        // ================= 完整ABI (保持不变) =================
+        // ================= 完整ABI =================
         const ABI_STAKING = [{"inputs":[{"internalType":"address","name":"marketingAddress_","type":"address"},{"internalType":"address","name":"devAddress_","type":"address"},{"internalType":"address","name":"threesevenAddress_","type":"address"}],"stateMutability":"nonpayable","type":"constructor"},{"inputs":[{"internalType":"uint256","name":"x","type":"uint256"},{"internalType":"uint256","name":"y","type":"uint256"}],"name":"PRBMath_MulDiv18_Overflow","type":"error"},{"inputs":[{"internalType":"uint256","name":"x","type":"uint256"},{"internalType":"uint256","name":"y","type":"uint256"},{"internalType":"uint256","name":"denominator","type":"uint256"}],"name":"PRBMath_MulDiv_Overflow","type":"error"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":true,"internalType":"address","name":"newOwner","type":"address"}],"name":"OwnershipTransferred","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"uint256","name":"reward","type":"uint256"},{"indexed":false,"internalType":"uint40","name":"timestamp","type":"uint40"},{"indexed":false,"internalType":"uint256","name":"index","type":"uint256"}],"name":"RewardPaid","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"user","type":"address"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"timestamp","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"index","type":"uint256"},{"indexed":false,"internalType":"uint256","name":"stakeTime","type":"uint256"}],"name":"Staked","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"from","type":"address"},{"indexed":true,"internalType":"address","name":"to","type":"address"},{"indexed":false,"internalType":"uint256","name":"amount","type":"uint256"}],"name":"Transfer","type":"event"},{"inputs":[],"name":"GANA","outputs":[{"internalType":"contract IGANA","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"MIN_STAKE_USDT","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"back_Fee","outputs":[{"internalType":"uint8","name":"","type":"uint8"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"account","type":"address"}],"name":"balanceOf","outputs":[{"internalType":"uint256","name":"balance","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"balances","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"decimals","outputs":[{"internalType":"uint8","name":"","type":"uint8"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"devAddress","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"user","type":"address"}],"name":"isPreacher","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"market_Fee","outputs":[{"internalType":"uint8","name":"","type":"uint8"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"marketingAddress","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"maxStakeAmount","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"name","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"network1In","outputs":[{"internalType":"uint256","name":"value","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"owner","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"user","type":"address"},{"internalType":"uint8","name":"index","type":"uint8"}],"name":"principalPlusRewardOfSlot","outputs":[{"internalType":"uint256","name":"reward","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"}],"name":"ratePerSec","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"_gana","type":"address"}],"name":"setGANA","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint160","name":"_amount","type":"uint160"},{"internalType":"uint256","name":"amountOutMin","type":"uint256"},{"internalType":"uint8","name":"_stakeIndex","type":"uint8"}],"name":"stake","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"user","type":"address"}],"name":"stakeCount","outputs":[{"internalType":"uint256","name":"count","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"symbol","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"sync","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"","type":"uint256"}],"name":"t_supply","outputs":[{"internalType":"uint40","name":"stakeTime","type":"uint40"},{"internalType":"uint160","name":"tamount","type":"uint160"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"threesevenAddress","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"threeseven_Fee","outputs":[{"internalType":"uint8","name":"","type":"uint8"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"totalSupply","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"newOwner","type":"address"}],"name":"transferOwnership","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"index","type":"uint256"}],"name":"unstake","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"userIndex","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"","type":"address"},{"internalType":"uint256","name":"","type":"uint256"}],"name":"userStakeRecord","outputs":[{"internalType":"uint40","name":"stakeTime","type":"uint40"},{"internalType":"uint160","name":"amount","type":"uint160"},{"internalType":"bool","name":"status","type":"bool"},{"internalType":"uint8","name":"stakeIndex","type":"uint8"}],"stateMutability":"view","type":"function"}];
 
         // ================= 配置 =================
@@ -4128,11 +4143,11 @@
         let allStakeRecords = [];
         let lastAddressList = '';
         
-        // 每日统计起始时间偏移（小时） 默认改为0
-        let dailyStartHour = 0; // 默认 UTC+0 00:00
+        // 每日统计起始时间偏移（小时） 默认0点
+        let dailyStartHour = 0;
         
         // 图表当前显示范围 (天)
-        let trendRange = 90; // 默认90天
+        let trendRange = 90;
         
         let stats = {
             totalStaked: 0, totalStaked1d: 0, totalStaked15d: 0, totalStaked30d: 0,
@@ -4142,6 +4157,20 @@
 
         // ================= Chart 实例引用 =================
         let trendChart, pieChart, unlockChart;
+
+        // ================= 移动端检测函数 =================
+        function isMobileDevice() {
+            return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth <= 768;
+        }
+
+        // ================= 显示移动端提示 =================
+        function showMobileHint(message) {
+            const hintEl = document.getElementById('mobileHint');
+            if (hintEl) {
+                hintEl.style.display = 'block';
+                hintEl.innerHTML = message;
+            }
+        }
 
         // ================= 初始化 =================
         window.addEventListener('load', async () => {
@@ -4194,10 +4223,12 @@
             // 监听地址输入变化
             document.getElementById('addressList').addEventListener('input', updateAddressCount);
             
-            // 默认激活90天按钮
-            document.querySelectorAll('.range-btn').forEach(btn => {
-                if (btn.innerText.includes('90')) btn.classList.add('active');
-            });
+            // 移动端优化
+            if (isMobileDevice()) {
+                document.querySelector('.subtitle').innerHTML += ' 📱';
+                trendRange = 30; // 移动端默认30天
+                showMobileHint('📱 移动版已优化，大数据时会自动精简显示');
+            }
         });
 
         // ================= 每日统计起始时间配置 =================
@@ -4315,31 +4346,125 @@
             updateAllCharts();  // 数据更新后刷新图表
         }
 
-        // ================= 数据持久化 =================
+        // ================= 数据持久化（优化移动端存储）=================
         function saveToStorage() {
             try {
+                const isMobile = isMobileDevice();
+                
+                // 检查数据大小，如果太大则只保存必要信息
                 const data = {
                     addressList: document.getElementById('addressList').value,
                     lastAddressList: lastAddressList,
                     stats: stats,
-                    queryResults: queryResults,
-                    allStakeRecords: allStakeRecords,
-                    addressCache: Array.from(addressCache.entries()),
-                    recordCache: Array.from(recordCache.entries()),
+                    // 限制保存的记录数，移动端只保存最近记录
+                    queryResults: isMobile ? queryResults.slice(0, 200) : queryResults,
+                    allStakeRecords: isMobile ? allStakeRecords.slice(0, 500) : allStakeRecords,
+                    // 缓存也限制大小
+                    addressCache: isMobile ? [] : Array.from(addressCache.entries()),
+                    recordCache: isMobile ? [] : Array.from(recordCache.entries()),
                     timestamp: Date.now(),
-                    dailyStartHour: dailyStartHour
+                    dailyStartHour: dailyStartHour,
+                    // 添加移动端标记
+                    isMobileVersion: isMobile
                 };
-                localStorage.setItem(CONFIG.STORAGE_KEY, JSON.stringify(data));
-                console.log('数据已保存到本地');
+                
+                const jsonStr = JSON.stringify(data);
+                
+                // 检查大小（移动端限制更严格）
+                const sizeInMB = new Blob([jsonStr]).size / (1024 * 1024);
+                const maxSize = isMobile ? 3 : 8; // 移动端最大3MB，桌面端8MB
+                
+                if (sizeInMB > maxSize) {
+                    console.warn(`数据过大 (${sizeInMB.toFixed(2)}MB)，尝试压缩...`);
+                    // 进一步压缩：只保留必要的统计数据和最近记录
+                    data.queryResults = queryResults.slice(0, 100);
+                    data.allStakeRecords = allStakeRecords.slice(0, 200);
+                    data.addressCache = [];
+                    data.recordCache = [];
+                    
+                    const compressedStr = JSON.stringify(data);
+                    localStorage.setItem(CONFIG.STORAGE_KEY, compressedStr);
+                    console.log(`压缩后数据已保存: ${(new Blob([compressedStr]).size / 1024 / 1024).toFixed(2)}MB`);
+                    
+                    if (isMobile) {
+                        showMobileHint(`📱 已保存最近 ${data.queryResults.length} 条记录，完整数据请在电脑端查看`);
+                    }
+                } else {
+                    localStorage.setItem(CONFIG.STORAGE_KEY, jsonStr);
+                    console.log(`数据已保存到本地: ${sizeInMB.toFixed(2)}MB`);
+                }
+                
+                // 保存摘要信息用于快速加载
+                saveStorageMeta();
             } catch (e) {
                 console.error('保存数据失败:', e);
+                // 如果保存失败，尝试保存最小版本
+                try {
+                    const minimalData = {
+                        stats: stats,
+                        timestamp: Date.now(),
+                        dailyStartHour: dailyStartHour,
+                        isMinimal: true
+                    };
+                    localStorage.setItem(CONFIG.STORAGE_KEY + '_min', JSON.stringify(minimalData));
+                    alert('数据较大，已保存精简版本。完整数据请在电脑端查看。');
+                } catch (e2) {
+                    console.error('保存最小版本也失败:', e2);
+                }
+            }
+        }
+
+        // 保存元数据用于快速加载
+        function saveStorageMeta() {
+            try {
+                const meta = {
+                    hasData: queryResults.length > 0,
+                    recordCount: queryResults.length,
+                    totalStaked: stats.totalStaked,
+                    timestamp: Date.now()
+                };
+                localStorage.setItem(CONFIG.STORAGE_KEY + '_meta', JSON.stringify(meta));
+            } catch (e) {
+                console.log('保存元数据失败');
             }
         }
 
         function loadFromStorage() {
             try {
+                const isMobile = isMobileDevice();
+                
+                // 先尝试加载元数据，快速显示统计信息
+                const metaStr = localStorage.getItem(CONFIG.STORAGE_KEY + '_meta');
+                if (metaStr) {
+                    const meta = JSON.parse(metaStr);
+                    if (meta.hasData) {
+                        document.getElementById('totalAddresses').innerText = meta.recordCount || '0';
+                        document.getElementById('totalStaked').innerText = meta.totalStaked?.toFixed(2) || '0.00';
+                    }
+                }
+                
                 const saved = localStorage.getItem(CONFIG.STORAGE_KEY);
-                if (!saved) return false;
+                if (!saved) {
+                    // 尝试加载最小版本
+                    const minimal = localStorage.getItem(CONFIG.STORAGE_KEY + '_min');
+                    if (minimal) {
+                        const data = JSON.parse(minimal);
+                        if (data.stats) stats = data.stats;
+                        if (data.dailyStartHour !== undefined) {
+                            dailyStartHour = data.dailyStartHour;
+                            document.getElementById('dailyStartTime').value = dailyStartHour;
+                            updateTimezoneDisplay();
+                        }
+                        updateStats();
+                        
+                        if (isMobile) {
+                            showMobileHint('📱 已加载精简数据（完整数据请在电脑端查看）');
+                        }
+                        
+                        return true;
+                    }
+                    return false;
+                }
                 
                 const data = JSON.parse(saved);
                 
@@ -4364,7 +4489,7 @@
                     allStakeRecords = data.allStakeRecords;
                 }
                 
-                // 恢复缓存
+                // 恢复缓存（如果有）
                 if (data.addressCache) {
                     addressCache = new Map(data.addressCache);
                 }
@@ -4380,10 +4505,21 @@
                     updateTimezoneDisplay();
                 }
                 
-                console.log(`已加载上次数据，时间: ${new Date(data.timestamp).toLocaleString()}`);
+                const recordCount = queryResults.length;
+                console.log(`已加载上次数据，记录数: ${recordCount}, 时间: ${new Date(data.timestamp).toLocaleString()}`);
+                
+                // 移动端显示提示
+                if (isMobile && recordCount > 200) {
+                    showMobileHint(`📱 已加载 ${recordCount} 条记录，移动端仅显示前200条。建议在电脑端查看完整数据。`);
+                }
+                
                 return true;
             } catch (e) {
                 console.error('加载数据失败:', e);
+                // 尝试清除损坏的数据
+                try {
+                    localStorage.removeItem(CONFIG.STORAGE_KEY);
+                } catch (e2) {}
                 return false;
             }
         }
@@ -4450,6 +4586,9 @@
                 
                 // 清除存储
                 localStorage.removeItem(CONFIG.STORAGE_KEY);
+                localStorage.removeItem(CONFIG.STORAGE_KEY + '_meta');
+                localStorage.removeItem(CONFIG.STORAGE_KEY + '_min');
+                
                 // 更新图表（清空）
                 updateAllCharts();
             }
@@ -4523,7 +4662,7 @@
             }
         }
 
-        // ================= 图表范围切换 (包含90天) =================
+        // ================= 图表范围切换 =================
         function setTrendRange(days) {
             trendRange = days;
             // 更新按钮激活状态
@@ -4977,7 +5116,6 @@
                             () => stakingContract.stakeCount(address),
                             `stakeCount(${address})`
                         );
-                        const cached = addressCache.get(address);
                         
                         // 查询所有记录，检查状态变化
                         for (let j = 0; j < Number(currentCount); j++) {
@@ -5187,16 +5325,20 @@
             `).join('');
         }
 
-        // ================= 渲染结果 =================
+        // ================= 渲染结果（移动端优化）=================
         function renderResults(highlightNew = false) {
             const tbody = document.getElementById('resultTableBody');
+            const isMobile = isMobileDevice();
             
             if (queryResults.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="8" class="empty-state">📭 无质押记录</td></tr>';
                 return;
             }
             
-            tbody.innerHTML = queryResults.map((r, i) => {
+            // 移动端只显示前200条
+            const displayResults = isMobile ? queryResults.slice(0, 200) : queryResults;
+            
+            let html = displayResults.map((r, i) => {
                 const stake = formatStakeTime(r.stakeTime);
                 const unlock = formatStakeTime(r.unlockTime);
                 const status = r.timeRemaining <= 0 ? '可赎回' : '锁仓';
@@ -5215,6 +5357,13 @@
                     <td class="${statusClass}">${status}</td>
                 </tr>`;
             }).join('');
+            
+            // 移动端提示
+            if (isMobile && queryResults.length > 200) {
+                html += `<tr><td colspan="8" class="empty-state" style="padding: 10px;">📱 仅显示前200条记录，共 ${queryResults.length} 条</td></tr>`;
+            }
+            
+            tbody.innerHTML = html;
         }
 
         function copyAddress(address) {
