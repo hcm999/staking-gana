@@ -9,7 +9,7 @@
     <!-- 引入 Ethers.js V6 -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.0/ethers.umd.min.js"></script>
     <style>
-        /* 样式保持不变，同上一个版本 */
+        /* 样式保持不变，新增配置面板样式 */
         * {
             margin: 0;
             padding: 0;
@@ -474,6 +474,49 @@
             font-size: 0.65rem;
             margin-left: 8px;
         }
+        
+        /* 配置面板样式 */
+        .config-panel {
+            background: linear-gradient(145deg, #1e293b, #0f172a);
+            border: 1px solid #334155;
+            border-radius: 16px;
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+        .config-row {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+        .config-label {
+            color: #94a3b8;
+            font-size: 0.85rem;
+        }
+        .config-select {
+            background-color: #334155;
+            border: 1px solid #475569;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 30px;
+            font-size: 0.9rem;
+            cursor: pointer;
+        }
+        .config-select:hover {
+            border-color: #3b82f6;
+        }
+        .config-select:focus {
+            outline: none;
+            border-color: #3b82f6;
+        }
+        .timezone-info {
+            color: #60a5fa;
+            font-size: 0.8rem;
+            background-color: #1e293b;
+            padding: 4px 12px;
+            border-radius: 20px;
+            border: 1px solid #334155;
+        }
     </style>
 </head>
 <body>
@@ -539,6 +582,32 @@
             </div>
         </div>
 
+        <!-- 配置面板：每日统计起始时间 -->
+        <div class="config-panel">
+            <div class="config-row">
+                <span class="config-label">📅 每日统计起始时间：</span>
+                <select id="dailyStartTime" class="config-select" onchange="updateDailyStartTime()">
+                    <option value="0">00:00 (UTC+0)</option>
+                    <option value="1">01:00 (UTC+1)</option>
+                    <option value="2">02:00 (UTC+2)</option>
+                    <option value="3">03:00 (UTC+3)</option>
+                    <option value="4">04:00 (UTC+4)</option>
+                    <option value="5">05:00 (UTC+5)</option>
+                    <option value="6">06:00 (UTC+6)</option>
+                    <option value="7">07:00 (UTC+7)</option>
+                    <option value="8" selected>08:00 (北京时间 UTC+8)</option>
+                    <option value="9">09:00 (UTC+9)</option>
+                    <option value="10">10:00 (UTC+10)</option>
+                    <option value="11">11:00 (UTC+11)</option>
+                    <option value="12">12:00 (UTC+12)</option>
+                </select>
+                <span class="timezone-info" id="timezoneDisplay">当前: 北京时间 (UTC+8) 08:00</span>
+            </div>
+            <div class="config-row" style="margin-top: 8px;">
+                <span class="config-label">💡 说明：每日从所选时间开始计算，例如选择08:00则从早上8点到次日早上8点为一天</span>
+            </div>
+        </div>
+
         <!-- 地址输入区域 -->
         <div class="address-input-area">
             <textarea id="addressList" class="address-textarea" placeholder="每行一个地址，最多5000个&#10;例如：&#10;0x72212F35aC448FE7763aA1BFdb360193Fa098E52">0x72212F35aC448FE7763aA1BFdb360193Fa098E52</textarea>
@@ -549,7 +618,7 @@
                 <span class="example-tag" onclick="addAddress('0x72212F35aC448FE7763aA1BFdb360193Fa098E52')">➕ 合约</span>
                 <span class="example-tag" onclick="addAddress('0x55d398326f99059fF775485246999027B3197955')">➕ USDT</span>
                 <span class="example-tag" onclick="addAddress('0xa2f464a2462aed49b9b31eb8861bc6b0bbb0483f')">➕ LP池</span>
-                <span class="example-tag" onclick="addSampleAddresses()">📝 测试(5地址)</span>
+                <span class="example-tag" onclick="addSampleAddresses()">📝 测试(3280地址)</span>
                 <span class="example-tag" onclick="clearAddresses()">🗑️ 清空</span>
                 <span class="example-tag" onclick="loadLastQuery()">📂 加载上次查询</span>
             </div>
@@ -3959,17 +4028,182 @@
         let failedAddresses = [];
         
         // 数据缓存
-        let addressCache = new Map(); // 地址 -> {stakeCount, lastUpdate}
-        let recordCache = new Map();   // 地址_索引 -> 记录数据
+        let addressCache = new Map();
+        let recordCache = new Map();
         let queryResults = [];
         let allStakeRecords = [];
-        let lastAddressList = ''; // 上次查询的地址列表
+        let lastAddressList = '';
+        
+        // 每日统计起始时间偏移（小时）
+        let dailyStartHour = 8; // 默认北京时间 08:00
         
         let stats = {
             totalStaked: 0, totalStaked1d: 0, totalStaked15d: 0, totalStaked30d: 0,
             count1d: 0, count15d: 0, count30d: 0,
             unlock2d: 0, unlock7d: 0, unlock15d: 0
         };
+
+        // ================= 初始化 =================
+        window.addEventListener('load', async () => {
+            try {
+                // BSC节点列表
+                const BSC_NODES = [
+                    'https://bsc-dataseed1.binance.org',
+                    'https://bsc-dataseed2.binance.org',
+                    'https://bsc-dataseed3.binance.org',
+                    'https://bsc-dataseed4.binance.org'
+                ];
+
+                let connected = false;
+
+                // 尝试直接连接BSC节点
+                for (const node of BSC_NODES) {
+                    try {
+                        console.log(`尝试连接节点: ${node}`);
+                        const provider = new ethers.JsonRpcProvider(node);
+                        await provider.getBlockNumber();
+                        stakingContract = new ethers.Contract(CONFIG.STAKING, ABI_STAKING, provider);
+                        console.log(`✅ 连接成功: ${node}`);
+                        connected = true;
+                        break;
+                    } catch (e) {
+                        console.log(`节点 ${node} 连接失败`);
+                    }
+                }
+
+                if (connected) {
+                    document.getElementById('stakingContractAddress').innerText = CONFIG.STAKING;
+                    
+                    // 尝试加载上次数据
+                    if (loadFromStorage()) {
+                        // 重新计算每日统计
+                        recalcAllDailyStats();
+                        document.getElementById('queryMode').innerText = '缓存数据';
+                        document.getElementById('queryMode').className = 'query-mode mode-cached';
+                    }
+                    
+                    // 加载保存的起始时间设置
+                    loadDailyStartSetting();
+                } else {
+                    alert("无法连接到BSC网络，请刷新重试");
+                }
+            } catch (error) {
+                console.error("❌ 初始化失败:", error);
+            }
+
+            // 监听地址输入变化
+            document.getElementById('addressList').addEventListener('input', updateAddressCount);
+        });
+
+        // ================= 每日统计起始时间配置 =================
+        function loadDailyStartSetting() {
+            try {
+                const saved = localStorage.getItem('dailyStartHour');
+                if (saved) {
+                    dailyStartHour = parseInt(saved);
+                    document.getElementById('dailyStartTime').value = dailyStartHour;
+                }
+                updateTimezoneDisplay();
+            } catch (e) {
+                console.log('加载起始时间设置失败');
+            }
+        }
+
+        function saveDailyStartSetting() {
+            try {
+                localStorage.setItem('dailyStartHour', dailyStartHour);
+            } catch (e) {
+                console.log('保存起始时间设置失败');
+            }
+        }
+
+        function updateDailyStartTime() {
+            const select = document.getElementById('dailyStartTime');
+            dailyStartHour = parseInt(select.value);
+            updateTimezoneDisplay();
+            saveDailyStartSetting();
+            
+            // 重新计算并渲染每日统计
+            if (allStakeRecords.length > 0 || queryResults.length > 0) {
+                recalcAllDailyStats();
+            }
+        }
+
+        function updateTimezoneDisplay() {
+            const timezoneMap = {
+                0: 'UTC+0 00:00',
+                1: 'UTC+1 01:00', 2: 'UTC+2 02:00', 3: 'UTC+3 03:00',
+                4: 'UTC+4 04:00', 5: 'UTC+5 05:00', 6: 'UTC+6 06:00',
+                7: 'UTC+7 07:00', 8: '北京时间 08:00', 9: 'UTC+9 09:00',
+                10: 'UTC+10 10:00', 11: 'UTC+11 11:00', 12: 'UTC+12 12:00'
+            };
+            document.getElementById('timezoneDisplay').innerText = 
+                `当前: ${timezoneMap[dailyStartHour] || `UTC+${dailyStartHour} ${dailyStartHour}:00`}`;
+        }
+
+        // ================= 根据起始时间获取日期字符串 =================
+        function getDateStrFromTimestamp(timestamp) {
+            const date = new Date(timestamp * 1000);
+            
+            // 根据起始小时偏移调整日期
+            const hour = date.getUTCHours() + dailyStartHour;
+            
+            // 创建UTC日期对象
+            const utcDate = new Date(Date.UTC(
+                date.getUTCFullYear(),
+                date.getUTCMonth(),
+                date.getUTCDate(),
+                date.getUTCHours(),
+                date.getUTCMinutes(),
+                date.getUTCSeconds()
+            ));
+            
+            // 如果当前时间小于起始小时，算作前一天
+            if (date.getUTCHours() < dailyStartHour) {
+                utcDate.setUTCDate(utcDate.getUTCDate() - 1);
+            }
+            
+            // 格式化为 YYYY-MM-DD
+            const year = utcDate.getUTCFullYear();
+            const month = String(utcDate.getUTCMonth() + 1).padStart(2, '0');
+            const day = String(utcDate.getUTCDate()).padStart(2, '0');
+            
+            return `${year}-${month}-${day}`;
+        }
+
+        // ================= 重新计算所有每日统计 =================
+        function recalcAllDailyStats() {
+            const dailyStats = new Map();
+            const activeDaily = new Map();
+            
+            const records = allStakeRecords.length > 0 ? allStakeRecords : queryResults;
+            
+            records.forEach(record => {
+                const dateStr = getDateStrFromTimestamp(record.stakeTime);
+                
+                if (!dailyStats.has(dateStr)) {
+                    dailyStats.set(dateStr, {
+                        newStake: 0,
+                        byPool: {0: 0, 1: 0, 2: 0},
+                        count: {0: 0, 1: 0, 2: 0}
+                    });
+                }
+                
+                const dayData = dailyStats.get(dateStr);
+                dayData.newStake += record.amount;
+                dayData.byPool[record.stakeIndex] += record.amount;
+                dayData.count[record.stakeIndex]++;
+                
+                if (!record.isRedeemed) {
+                    if (!activeDaily.has(dateStr)) {
+                        activeDaily.set(dateStr, 0);
+                    }
+                    activeDaily.set(dateStr, activeDaily.get(dateStr) + record.amount);
+                }
+            });
+            
+            renderDailyStats(dailyStats, activeDaily);
+        }
 
         // ================= 数据持久化 =================
         function saveToStorage() {
@@ -3982,7 +4216,8 @@
                     allStakeRecords: allStakeRecords,
                     addressCache: Array.from(addressCache.entries()),
                     recordCache: Array.from(recordCache.entries()),
-                    timestamp: Date.now()
+                    timestamp: Date.now(),
+                    dailyStartHour: dailyStartHour
                 };
                 localStorage.setItem(CONFIG.STORAGE_KEY, JSON.stringify(data));
                 console.log('数据已保存到本地');
@@ -4028,6 +4263,13 @@
                     recordCache = new Map(data.recordCache);
                 }
                 
+                // 恢复起始时间设置
+                if (data.dailyStartHour !== undefined) {
+                    dailyStartHour = data.dailyStartHour;
+                    document.getElementById('dailyStartTime').value = dailyStartHour;
+                    updateTimezoneDisplay();
+                }
+                
                 console.log(`已加载上次数据，时间: ${new Date(data.timestamp).toLocaleString()}`);
                 return true;
             } catch (e) {
@@ -4038,42 +4280,9 @@
 
         function loadLastQuery() {
             if (loadFromStorage()) {
-                // 重新计算每日统计
-                const dailyStats = new Map();
-                const activeDaily = new Map();
-                
-                allStakeRecords.forEach(record => {
-                    const date = new Date(record.stakeTime * 1000);
-                    const dateStr = date.toLocaleDateString('zh-CN', { 
-                        year: 'numeric', 
-                        month: '2-digit', 
-                        day: '2-digit' 
-                    }).replace(/\//g, '-');
-                    
-                    if (!dailyStats.has(dateStr)) {
-                        dailyStats.set(dateStr, {
-                            newStake: 0,
-                            byPool: {0: 0, 1: 0, 2: 0},
-                            count: {0: 0, 1: 0, 2: 0}
-                        });
-                    }
-                    
-                    const dayData = dailyStats.get(dateStr);
-                    dayData.newStake += record.amount;
-                    dayData.byPool[record.stakeIndex] += record.amount;
-                    dayData.count[record.stakeIndex]++;
-                    
-                    if (!record.isRedeemed) {
-                        if (!activeDaily.has(dateStr)) {
-                            activeDaily.set(dateStr, 0);
-                        }
-                        activeDaily.set(dateStr, activeDaily.get(dateStr) + record.amount);
-                    }
-                });
-                
+                recalcAllDailyStats();
                 queryResults.sort((a, b) => b.stakeTime - a.stakeTime);
                 renderResults();
-                renderDailyStats(dailyStats, activeDaily);
                 updateStats();
                 
                 document.getElementById('queryMode').innerText = '缓存数据';
@@ -4084,91 +4293,6 @@
                 alert('没有找到上次查询的数据');
             }
         }
-
-        // ================= 初始化 =================
-        window.addEventListener('load', async () => {
-            try {
-                // BSC节点列表
-                const BSC_NODES = [
-                    'https://bsc-dataseed1.binance.org',
-                    'https://bsc-dataseed2.binance.org',
-                    'https://bsc-dataseed3.binance.org',
-                    'https://bsc-dataseed4.binance.org'
-                ];
-
-                let connected = false;
-
-                // 尝试直接连接BSC节点
-                for (const node of BSC_NODES) {
-                    try {
-                        console.log(`尝试连接节点: ${node}`);
-                        const provider = new ethers.JsonRpcProvider(node);
-                        await provider.getBlockNumber();
-                        stakingContract = new ethers.Contract(CONFIG.STAKING, ABI_STAKING, provider);
-                        console.log(`✅ 连接成功: ${node}`);
-                        connected = true;
-                        break;
-                    } catch (e) {
-                        console.log(`节点 ${node} 连接失败`);
-                    }
-                }
-
-                if (connected) {
-                    document.getElementById('stakingContractAddress').innerText = CONFIG.STAKING;
-                    
-                    // 尝试加载上次数据
-                    if (loadFromStorage()) {
-                        // 重新计算每日统计
-                        const dailyStats = new Map();
-                        const activeDaily = new Map();
-                        
-                        allStakeRecords.forEach(record => {
-                            const date = new Date(record.stakeTime * 1000);
-                            const dateStr = date.toLocaleDateString('zh-CN', { 
-                                year: 'numeric', 
-                                month: '2-digit', 
-                                day: '2-digit' 
-                            }).replace(/\//g, '-');
-                            
-                            if (!dailyStats.has(dateStr)) {
-                                dailyStats.set(dateStr, {
-                                    newStake: 0,
-                                    byPool: {0: 0, 1: 0, 2: 0},
-                                    count: {0: 0, 1: 0, 2: 0}
-                                });
-                            }
-                            
-                            const dayData = dailyStats.get(dateStr);
-                            dayData.newStake += record.amount;
-                            dayData.byPool[record.stakeIndex] += record.amount;
-                            dayData.count[record.stakeIndex]++;
-                            
-                            if (!record.isRedeemed) {
-                                if (!activeDaily.has(dateStr)) {
-                                    activeDaily.set(dateStr, 0);
-                                }
-                                activeDaily.set(dateStr, activeDaily.get(dateStr) + record.amount);
-                            }
-                        });
-                        
-                        queryResults.sort((a, b) => b.stakeTime - a.stakeTime);
-                        renderResults();
-                        renderDailyStats(dailyStats, activeDaily);
-                        updateStats();
-                        
-                        document.getElementById('queryMode').innerText = '缓存数据';
-                        document.getElementById('queryMode').className = 'query-mode mode-cached';
-                    }
-                } else {
-                    alert("无法连接到BSC网络，请刷新重试");
-                }
-            } catch (error) {
-                console.error("❌ 初始化失败:", error);
-            }
-
-            // 监听地址输入变化
-            document.getElementById('addressList').addEventListener('input', updateAddressCount);
-        });
 
         // ================= 辅助函数 =================
         function updateAddressCount() {
@@ -4460,12 +4584,7 @@
                         
                         // 更新每日统计
                         result.all.forEach(record => {
-                            const date = new Date(record.stakeTime * 1000);
-                            const dateStr = date.toLocaleDateString('zh-CN', { 
-                                year: 'numeric', 
-                                month: '2-digit', 
-                                day: '2-digit' 
-                            }).replace(/\//g, '-');
+                            const dateStr = getDateStrFromTimestamp(record.stakeTime);
                             
                             if (!dailyStats.has(dateStr)) {
                                 dailyStats.set(dateStr, {
@@ -4697,12 +4816,7 @@
                         
                         // 更新每日统计
                         addressRecords.forEach(record => {
-                            const date = new Date(record.stakeTime * 1000);
-                            const dateStr = date.toLocaleDateString('zh-CN', { 
-                                year: 'numeric', 
-                                month: '2-digit', 
-                                day: '2-digit' 
-                            }).replace(/\//g, '-');
+                            const dateStr = getDateStrFromTimestamp(record.stakeTime);
                             
                             if (!dailyStats.has(dateStr)) {
                                 dailyStats.set(dateStr, {
@@ -4884,12 +4998,7 @@
             const activeMap = new Map();
             
             allStakeRecords.forEach(record => {
-                const date = new Date(record.stakeTime * 1000);
-                const dateStr = date.toLocaleDateString('zh-CN', { 
-                    year: 'numeric', 
-                    month: '2-digit', 
-                    day: '2-digit' 
-                }).replace(/\//g, '-');
+                const dateStr = getDateStrFromTimestamp(record.stakeTime);
                 
                 if (!dailyMap.has(dateStr)) {
                     dailyMap.set(dateStr, {
