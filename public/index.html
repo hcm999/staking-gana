@@ -34,8 +34,8 @@
         
         .stats-grid {
             display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 10px;
+            grid-template-columns: repeat(4, 1fr); /* 改为4列 */
+            gap: 8px; /* 稍微减小间距 */
             margin-bottom: 16px;
         }
         
@@ -49,16 +49,16 @@
         .stat-card {
             background: linear-gradient(145deg, #1e293b, #0f172a);
             border: 1px solid #334155;
-            border-radius: 14px;
-            padding: 14px 10px;
+            border-radius: 12px; /* 稍微减小圆角 */
+            padding: 10px 6px; /* 减小内边距 */
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
         }
         
         .stat-title {
             color: #94a3b8;
-            font-size: 0.7rem;
+            font-size: 0.65rem; /* 减小字体 */
             text-transform: uppercase;
-            margin-bottom: 6px;
+            margin-bottom: 4px;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
@@ -66,7 +66,7 @@
         
         .stat-value {
             color: #38bdf8;
-            font-size: 1.2rem;
+            font-size: 1rem; /* 减小字体 */
             font-weight: bold;
             font-family: 'Courier New', monospace;
             line-height: 1.2;
@@ -82,7 +82,7 @@
         
         .stat-sub {
             color: #4ade80;
-            font-size: 0.7rem;
+            font-size: 0.6rem; /* 减小字体 */
             display: flex;
             justify-content: space-between;
         }
@@ -242,13 +242,13 @@
             flex: 1;
             background: linear-gradient(135deg, #3b82f6, #2563eb);
             border: none;
-            padding: 12px 16px;
+            padding: 12px 8px; /* 稍微减小左右内边距 */
             border-radius: 30px;
             color: white;
-            font-size: 0.9rem;
+            font-size: 0.85rem; /* 稍微减小字体 */
             font-weight: 600;
             cursor: pointer;
-            min-width: 120px;
+            min-width: auto; /* 移除最小宽度限制 */
         }
         
         .btn-query:disabled {
@@ -259,20 +259,20 @@
         .btn-clear {
             background-color: #334155;
             border: 1px solid #475569;
-            padding: 12px 16px;
+            padding: 12px 8px;
             border-radius: 30px;
             color: #e2e8f0;
-            font-size: 0.9rem;
+            font-size: 0.85rem;
             cursor: pointer;
         }
         
         .btn-incremental {
             background-color: #8b5cf6;
             border: 1px solid #a78bfa;
-            padding: 12px 16px;
+            padding: 12px 8px;
             border-radius: 30px;
             color: white;
-            font-size: 0.9rem;
+            font-size: 0.85rem;
             cursor: pointer;
             flex: 1;
         }
@@ -597,7 +597,25 @@
             .time-two-lines {
                 font-size: 0.65rem;
             }
+                /* 新增：统计卡片在极小屏幕上的调整 */
+    @media (max-width: 480px) {
+        .stats-grid {
+            gap: 4px;
         }
+        
+        .stat-title {
+            font-size: 0.55rem;
+        }
+        
+        .stat-value {
+            font-size: 0.85rem;
+        }
+        
+        .stat-sub {
+            font-size: 0.5rem;
+        }
+    }
+}
         /* 到这里结束 */
     </style>
 </head>
