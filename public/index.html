@@ -6163,10 +6163,10 @@ document.addEventListener('DOMContentLoaded', function() {
             { code: "GANA12345", days: 365, note: "年度授权" },
             
             // 限时授权码
-            { code: "TDST30", days: 30, note: "30天测试" },
-            { code: "TCST15", days: 15, note: "15天测试" },
-            { code: "TBST7", days: 7, note: "7天测试" },
-            { code: "TAST1", days: 1, note: "1天测试" },
+            { code: "TDST30", days: 30, note: "30天" },
+            { code: "TCST15", days: 15, note: "15天" },
+            { code: "TBST7", days: 7, note: "7天" },
+            { code: "TAST1", days: 1, note: "1天" },
             
             // 可以继续添加...
         ],
@@ -6217,6 +6217,8 @@ document.addEventListener('DOMContentLoaded', function() {
             alreadyAuth: "您已授权，有效期至：",
             copyAddress: "复制地址",
             switchMode: "切换授权方式"
+            codeHint: "请联系管理员获取授权码",
+            adminHint: "请联系管理员获取密码"
         }
     };
 
@@ -6671,17 +6673,11 @@ document.addEventListener('DOMContentLoaded', function() {
                     </button>
                 </div>
 
-                <!-- 显示可用授权码提示 -->
+                <!-- 只显示提示，不显示具体授权码 -->
                 <div style="margin-top: 20px; padding: 12px; background: #1e293b; border-radius: 16px;">
-                    <div style="color: #94a3b8; font-size: 0.8rem; margin-bottom: 8px;">💡 可用的授权码示例：</div>
-                    <div style="display: flex; flex-wrap: wrap; gap: 6px;">
-                        ${AUTH_CONFIG.codes.slice(0, 4).map(c => `
-                            <span onclick="document.getElementById('codeInput').value='${c.code}'" 
-                                style="background: #334155; padding: 4px 10px; border-radius: 20px; 
-                                color: #94a3b8; font-size: 0.7rem; cursor: pointer; border: 1px solid #475569;">
-                                ${c.code}
-                            </span>
-                        `).join('')}
+                    <div style="color: #94a3b8; font-size: 0.8rem; display: flex; align-items: center; gap: 5px;">
+                        <span>ℹ️</span>
+                        <span>${AUTH_CONFIG.messages.codeHint}</span>
                     </div>
                 </div>
             </div>
@@ -6701,10 +6697,11 @@ document.addEventListener('DOMContentLoaded', function() {
                     </button>
                 </div>
 
+                <!-- 只显示提示，不显示密码 -->
                 <div style="margin-top: 15px; padding: 12px; background: #1e293b; border-radius: 16px;">
                     <div style="color: #94a3b8; font-size: 0.8rem; display: flex; align-items: center; gap: 5px;">
                         <span>ℹ️</span>
-                        <span>管理员密码: ${AUTH_CONFIG.admin.password}</span>
+                        <span>${AUTH_CONFIG.messages.adminHint}</span>
                     </div>
                 </div>
             </div>
