@@ -6045,5 +6045,425 @@ document.addEventListener('DOMContentLoaded', function() {
     setupToggle(addressBtn, addressInput);
 });
 </script>
+<script>
+// ================= 授权码功能（支持多时间段）=================
+(function() {
+    // 授权配置 - 可以配置多个授权码和对应的时间段
+    const AUTHORIZATION_CONFIG = {
+        // 启用/禁用授权功能
+        enabled: true,  // 设为 false 关闭授权检查
+        
+        // 授权码列表 - 支持多个授权码
+        codes: [
+            {
+                code: "HCM",           // 授权码
+                validFrom: "2026-01-01",    // 有效期开始
+                validTo: "2027-01-01",       // 有效期结束
+                note: "管理授权"       // 备注（可选）
+            },
+            {
+                code: "TEST123",
+                validFrom: "2026-01-01",
+                validTo: "2026-03-31",
+                note: "月度授权"
+            },
+            {
+                code: "TDST123",
+                validFrom: "2026-01-01",
+                validTo: "2026-05-31",
+                note: "季度授权"
+            },
+            {
+                code: "TCST123",
+                validFrom: "2026-01-01",
+                validTo: "2026-08-31",
+                note: "半年授权"
+            },
+            {
+                code: "TEST123",
+                validFrom: "2026-01-01",
+                validTo: "2027-03-31",
+                note: "年度授权"
+            },
+            // 可以继续添加更多授权码...
+            // 例如临时授权：
+            {
+                code: "GANA",
+                validFrom: "2026-01-01",
+                validTo: "2026-02-28",
+                note: "临时授权"
+            }
+        ],
+        
+        // 授权失败时的提示
+        messages: {
+            title: "🔐 授权验证",
+            prompt: "请输入授权码：",
+            success: "✅ 授权成功！有效期至：",
+            expired: "❌ 授权码已过期（有效期：{validFrom} 至 {validTo}）",
+            invalid: "❌ 授权码无效",
+            error: "❌ 授权验证失败",
+            welcome: "欢迎使用 GANA 质押数据监控平台"
+        },
+        
+        // 存储键名
+        storageKey: 'GANA_AUTH'
+    };
+
+    // 日期工具函数
+    const DateUtils = {
+        // 解析日期字符串为时间戳
+        parseDate(dateStr) {
+            if (!dateStr) return null;
+            // 支持 YYYY-MM-DD 格式
+            const parts = dateStr.split('-');
+            if (parts.length === 3) {
+                return new Date(parts[0], parts[1] - 1, parts[2]).getTime();
+            }
+            return null;
+        },
+
+        // 检查当前时间是否在有效期内
+        isValid(validFrom, validTo) {
+            const now = new Date().getTime();
+            const fromTime = this.parseDate(validFrom);
+            const toTime = this.parseDate(validTo);
+            
+            if (!fromTime || !toTime) return false;
+            return now >= fromTime && now <= toTime;
+        },
+
+        // 格式化日期
+        formatDate(dateStr) {
+            if (!dateStr) return '';
+            const parts = dateStr.split('-');
+            if (parts.length === 3) {
+                return `${parts[0]}年${parts[1]}月${parts[2]}日`;
+            }
+            return dateStr;
+        }
+    };
+
+    // 授权管理器
+    const AuthManager = {
+        // 检查是否已授权
+        isAuthorized() {
+            try {
+                const auth = localStorage.getItem(AUTHORIZATION_CONFIG.storageKey);
+                if (!auth) return false;
+                
+                const { code, timestamp } = JSON.parse(auth);
+                
+                // 检查授权码是否仍然有效
+                const validCode = AUTHORIZATION_CONFIG.codes.find(c => c.code === code);
+                if (!validCode) return false;
+                
+                // 检查是否过期
+                return DateUtils.isValid(validCode.validFrom, validCode.validTo);
+            } catch (e) {
+                return false;
+            }
+        },
+
+        // 获取当前授权信息
+        getCurrentAuth() {
+            try {
+                const auth = localStorage.getItem(AUTHORIZATION_CONFIG.storageKey);
+                if (!auth) return null;
+                
+                const { code, timestamp } = JSON.parse(auth);
+                const validCode = AUTHORIZATION_CONFIG.codes.find(c => c.code === code);
+                
+                if (!validCode) return null;
+                
+                return {
+                    code: validCode.code,
+                    note: validCode.note,
+                    validFrom: validCode.validFrom,
+                    validTo: validCode.validTo,
+                    timestamp
+                };
+            } catch (e) {
+                return null;
+            }
+        },
+
+        // 保存授权
+        saveAuth(code) {
+            localStorage.setItem(AUTHORIZATION_CONFIG.storageKey, JSON.stringify({
+                code,
+                timestamp: new Date().toISOString()
+            }));
+        },
+
+        // 清除授权
+        clearAuth() {
+            localStorage.removeItem(AUTHORIZATION_CONFIG.storageKey);
+        },
+
+        // 验证授权码
+        validateCode(inputCode) {
+            const validCode = AUTHORIZATION_CONFIG.codes.find(c => c.code === inputCode);
+            
+            if (!validCode) {
+                return { valid: false, reason: 'invalid' };
+            }
+            
+            if (!DateUtils.isValid(validCode.validFrom, validCode.validTo)) {
+                return { 
+                    valid: false, 
+                    reason: 'expired',
+                    validFrom: validCode.validFrom,
+                    validTo: validCode.validTo
+                };
+            }
+            
+            return { 
+                valid: true, 
+                code: validCode.code,
+                note: validCode.note,
+                validFrom: validCode.validFrom,
+                validTo: validCode.validTo
+            };
+        }
+    };
+
+    // 创建授权弹窗
+    function showAuthDialog() {
+        // 创建遮罩层
+        const overlay = document.createElement('div');
+        overlay.className = 'auth-overlay';
+        overlay.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(5px);
+            z-index: 10000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            animation: authFadeIn 0.3s ease;
+        `;
+
+        // 创建弹窗
+        const dialog = document.createElement('div');
+        dialog.className = 'auth-dialog';
+        dialog.style.cssText = `
+            background: linear-gradient(145deg, #1e293b, #0f172a);
+            border: 1px solid #334155;
+            border-radius: 24px;
+            padding: 30px;
+            max-width: 400px;
+            width: 90%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            animation: authSlideIn 0.3s ease;
+        `;
+
+        // 当前授权信息（如果有）
+        const currentAuth = AuthManager.getCurrentAuth();
+
+        dialog.innerHTML = `
+            <div style="text-align: center; margin-bottom: 25px;">
+                <div style="font-size: 48px; margin-bottom: 15px;">🔐</div>
+                <h2 style="color: #e2e8f0; margin: 0 0 10px 0; font-size: 1.5rem;">${AUTHORIZATION_CONFIG.messages.title}</h2>
+                <p style="color: #94a3b8; font-size: 0.9rem; margin: 0;">${AUTHORIZATION_CONFIG.messages.welcome}</p>
+                ${currentAuth ? `
+                    <div style="margin-top: 15px; padding: 12px; background: #2d3a4f; border-radius: 16px;">
+                        <div style="color: #4ade80; font-size: 0.9rem; margin-bottom: 5px;">✓ 当前已授权</div>
+                        <div style="color: #94a3b8; font-size: 0.8rem;">${currentAuth.note || currentAuth.code}</div>
+                        <div style="color: #94a3b8; font-size: 0.8rem;">有效期至：${DateUtils.formatDate(currentAuth.validTo)}</div>
+                    </div>
+                ` : ''}
+            </div>
+            
+            <div style="margin-bottom: 20px;">
+                <input type="password" id="authCodeInput" placeholder="请输入授权码" 
+                    style="width: 100%; padding: 14px; background: #0f172a; border: 2px solid #334155; 
+                    border-radius: 30px; color: #e2e8f0; font-size: 1rem; text-align: center; 
+                    outline: none; transition: border-color 0.3s;">
+            </div>
+            
+            <div style="display: flex; gap: 10px;">
+                <button id="authSubmitBtn" style="flex: 2; background: linear-gradient(135deg, #3b82f6, #2563eb); 
+                    border: none; padding: 14px; border-radius: 30px; color: white; font-size: 1rem; 
+                    font-weight: 600; cursor: pointer; transition: opacity 0.3s;">
+                    验证授权码
+                </button>
+                ${currentAuth ? `
+                    <button id="authClearBtn" style="flex: 1; background: #ef4444; border: none; 
+                        padding: 14px; border-radius: 30px; color: white; font-size: 1rem; 
+                        font-weight: 600; cursor: pointer; transition: opacity 0.3s;">
+                        清除
+                    </button>
+                ` : ''}
+            </div>
+            
+            <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #334155;">
+                <div style="color: #94a3b8; font-size: 0.75rem; text-align: center; line-height: 1.6;">
+                    提示：授权码区分大小写，请联系管理员获取<br>
+                    支持多个时间段授权
+                </div>
+            </div>
+        `;
+
+        overlay.appendChild(dialog);
+        document.body.appendChild(overlay);
+
+        // 添加动画样式
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes authFadeIn {
+                from { opacity: 0; }
+                to { opacity: 1; }
+            }
+            @keyframes authSlideIn {
+                from { transform: translateY(-20px); opacity: 0; }
+                to { transform: translateY(0); opacity: 1; }
+            }
+        `;
+        document.head.appendChild(style);
+
+        // 获取元素
+        const input = document.getElementById('authCodeInput');
+        const submitBtn = document.getElementById('authSubmitBtn');
+        const clearBtn = document.getElementById('authClearBtn');
+
+        // 自动聚焦输入框
+        input.focus();
+
+        // 输入框样式变化
+        input.addEventListener('focus', () => {
+            input.style.borderColor = '#3b82f6';
+        });
+        input.addEventListener('blur', () => {
+            input.style.borderColor = '#334155';
+        });
+
+        // 回车键验证
+        input.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                submitBtn.click();
+            }
+        });
+
+        // 提交验证
+        submitBtn.addEventListener('click', () => {
+            const inputCode = input.value.trim();
+            if (!inputCode) {
+                alert('请输入授权码');
+                return;
+            }
+
+            const result = AuthManager.validateCode(inputCode);
+            
+            if (result.valid) {
+                AuthManager.saveAuth(inputCode);
+                document.body.removeChild(overlay);
+                
+                // 显示成功提示
+                const msg = `${AUTHORIZATION_CONFIG.messages.success}${DateUtils.formatDate(result.validTo)}`;
+                if (result.note) {
+                    alert(msg + `\n授权类型：${result.note}`);
+                } else {
+                    alert(msg);
+                }
+                
+                // 刷新页面以重新加载（可选）
+                // location.reload();
+            } else {
+                if (result.reason === 'expired') {
+                    alert(AUTHORIZATION_CONFIG.messages.expired
+                        .replace('{validFrom}', DateUtils.formatDate(result.validFrom))
+                        .replace('{validTo}', DateUtils.formatDate(result.validTo)));
+                } else {
+                    alert(AUTHORIZATION_CONFIG.messages.invalid);
+                }
+                input.value = '';
+                input.focus();
+            }
+        });
+
+        // 清除授权
+        if (clearBtn) {
+            clearBtn.addEventListener('click', () => {
+                if (confirm('确定要清除授权吗？')) {
+                    AuthManager.clearAuth();
+                    document.body.removeChild(overlay);
+                    // 重新显示授权弹窗
+                    setTimeout(() => showAuthDialog(), 300);
+                }
+            });
+        }
+    }
+
+    // 主授权检查函数
+    function checkAuthorization() {
+        // 如果未启用授权，直接返回
+        if (!AUTHORIZATION_CONFIG.enabled) {
+            return;
+        }
+
+        // 检查是否已授权
+        if (!AuthManager.isAuthorized()) {
+            // 显示授权弹窗
+            showAuthDialog();
+        } else {
+            // 已授权，静默通过
+            console.log('✅ 授权验证通过');
+            
+            // 可选：在页面右上角显示授权信息
+            const currentAuth = AuthManager.getCurrentAuth();
+            if (currentAuth) {
+                const authBadge = document.createElement('div');
+                authBadge.style.cssText = `
+                    position: fixed;
+                    top: 10px;
+                    right: 10px;
+                    background: rgba(16, 185, 129, 0.2);
+                    border: 1px solid #10b981;
+                    color: #10b981;
+                    padding: 4px 12px;
+                    border-radius: 20px;
+                    font-size: 0.7rem;
+                    z-index: 9999;
+                    backdrop-filter: blur(5px);
+                    cursor: pointer;
+                `;
+                authBadge.title = `授权类型：${currentAuth.note || currentAuth.code}\n有效期至：${DateUtils.formatDate(currentAuth.validTo)}`;
+                authBadge.innerHTML = `🔐 已授权 ${currentAuth.note || ''}`;
+                
+                authBadge.addEventListener('click', () => {
+                    if (confirm('是否重新验证授权码？')) {
+                        AuthManager.clearAuth();
+                        location.reload();
+                    }
+                });
+                
+                document.body.appendChild(authBadge);
+            }
+        }
+    }
+
+    // 页面加载完成后执行授权检查
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', checkAuthorization);
+    } else {
+        checkAuthorization();
+    }
+
+    // 可选：暴露一些函数到全局，方便调试
+    window.AuthUtils = {
+        check: checkAuthorization,
+        clear: () => {
+            AuthManager.clearAuth();
+            location.reload();
+        },
+        getInfo: () => AuthManager.getCurrentAuth()
+    };
+})();
+</script>
 </body>
 </html>
