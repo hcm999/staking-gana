@@ -5362,6 +5362,12 @@
             document.getElementById('fullQueryBtn').disabled = true;
             document.getElementById('progressContainer').style.display = 'block';
 
+            // ========== 修复点：清空旧数据，重新构建 ==========
+            // 清空查询结果，避免重复
+            queryResults = [];
+            // 注意：allStakeRecords 不清空，因为需要保留所有历史记录用于每日统计
+            // 但需要重新构建 queryResults
+            
             const now = Math.floor(Date.now() / 1000);
             const limits = {
                 '2d': now + 172800,
