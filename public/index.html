@@ -6183,7 +6183,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 "0x9728D428764F846E8DD62C34371db716A9228238",
                 "0x211402E8cF1c4117Bbe17e61Ee62F875E31f100B",
                 "0x54Aeb4faF845e90DDA95C1966Ea151d8c431212a",
-                "0x67f7eb9384f2AF616bF2Ec100E19eA774B48aba8",
+                "0x67f7eb9384f2AF616bF2Ec100E19eA774B48aba8"
                 // 可以添加更多管理员地址
             ]
         },
@@ -6191,7 +6191,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // 存储键
         storageKey: 'HYBRID_AUTH',
         
-        // 提示信息
+        // 提示信息 - 确保包含了所有需要的字段
         messages: {
             title: "🔐 授权验证",
             subtitle: "请选择授权方式",
@@ -6211,12 +6211,12 @@ document.addEventListener('DOMContentLoaded', function() {
             noWallet: "未安装钱包",
             wrongNetwork: "请切换到BSC主网",
             insufficientUSDT: "USDT余额不足",
-            invalidCode: "授权码无效",
+            invalidCode: "❌ 授权码无效",
             expiredCode: "授权码已过期",
-            adminWelcome: "管理员登录成功",
+            adminWelcome: "👑 管理员登录成功",
             alreadyAuth: "您已授权，有效期至：",
             copyAddress: "复制地址",
-            switchMode: "切换授权方式"
+            switchMode: "切换授权方式",
             codeHint: "请联系管理员获取授权码",
             adminHint: "请联系管理员获取密码"
         }
@@ -7020,9 +7020,20 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // ========== 主授权检查 ==========
     function checkAuth() {
-        if (!AUTH_CONFIG.enabled) return;
+        console.log('检查授权状态...', AUTH_CONFIG.enabled);
+        if (!AUTH_CONFIG.enabled) {
+            console.log('授权已禁用');
+            return;
+        }
 
-        if (!AuthManager.isAuthorized()) {
+        // 清除可能存在的旧授权（测试用）
+        // localStorage.removeItem(AUTH_CONFIG.storageKey);
+        
+        const authorized = AuthManager.isAuthorized();
+        console.log('是否已授权:', authorized);
+        
+        if (!authorized) {
+            console.log('未授权，显示授权弹窗');
             setTimeout(() => showAuthDialog(), 500);
         } else {
             const authInfo = AuthManager.getAuthInfo();
@@ -7046,10 +7057,16 @@ document.addEventListener('DOMContentLoaded', function() {
     };
 
     // ========== 页面加载后执行 ==========
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', checkAuth);
-    } else {
+    // 确保在DOM加载完成后执行
+    function initAuth() {
+        console.log('初始化授权系统...');
         checkAuth();
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initAuth);
+    } else {
+        initAuth();
     }
 
     // ========== 监听账户变化 ==========
@@ -7057,6 +7074,9 @@ document.addEventListener('DOMContentLoaded', function() {
         window.ethereum.on('accountsChanged', (accounts) => {
             if (accounts.length === 0) {
                 console.log('钱包已断开');
+            } else {
+                // 账户变化时重新检查授权
+                checkAuth();
             }
         });
     }
