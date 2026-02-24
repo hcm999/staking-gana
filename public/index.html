@@ -177,7 +177,7 @@
         .amount-cell {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
             font-size: 0.75rem;
-            color: #ffaa00; /* 原4ade80#38bdf8 */
+            color: #38bdf8; /* 原4ade80#38bdf8 */
             font-weight: 600;
         }
         
@@ -643,6 +643,43 @@
         .file-label:hover {
             background-color: #5f6b7a;
         }
+            /* ========== 金额颜色自定义（精确版） ========== */
+
+/* 质押记录表格金额 - 蓝色 */
+#resultTableBody td.amount-cell {
+    color: #38bdf8 !important;
+}
+
+/* 每日统计 - 新增质押列（第2列）- 蓝色 */
+#dailyStatsBody tr td:nth-child(2) {
+    color: #38bdf8 !important;
+}
+
+/* 每日统计 - 仍在质押列（第3列）- 绿色 */
+#dailyStatsBody tr td:nth-child(3) {
+    color: #4ade80 !important;
+}
+
+/* 每日统计 - 1天新增（第4列）- 蓝色 */
+#dailyStatsBody tr td:nth-child(4) {
+    color: #38bdf8 !important;
+}
+
+/* 每日统计 - 15天新增（第5列）- 黄色 */
+#dailyStatsBody tr td:nth-child(5) {
+    color: #fbbf24 !important;
+}
+
+/* 每日统计 - 30天新增（第6列）- 红色 */
+#dailyStatsBody tr td:nth-child(6) {
+    color: #94a3b8 !important;
+}
+
+/* 调整字体大小 */
+#resultTableBody .amount-cell,
+#dailyStatsBody td {
+    font-size: 0.75rem;
+}
         /* 到这里结束 */
     </style>
 </head>
