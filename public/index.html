@@ -5770,58 +5770,94 @@
             const reader = new FileReader();
             reader.onload = (e) => {
                 try {
-                    const data = new Uint8Array(e.target.result);
-                    const workbook = XLSX.read(data, { type: 'array' });
+                    let addresses = [];
+                    const fileExt = file.name.split('.').pop().toLowerCase();
                     
-                    // 获取第一个工作表
-                    const firstSheetName = workbook.SheetNames[0];
-                    const worksheet = workbook.Sheets[firstSheetName];
-                    
-                    // 转换为二维数组
-                    const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
-                    
-                    if (rows.length === 0) {
-                        alert("文件内容为空");
-                        return;
-                    }
-
-                    // 收集所有可能的地址
-                    const addresses = [];
-                    
-                    // 从第二行开始遍历（跳过表头）
-                    for (let i = 1; i < rows.length; i++) {
-                        const row = rows[i];
-                        if (!row || row.length === 0) continue;
+                    // 如果是CSV文件，直接作为文本处理
+                    if (fileExt === 'csv' || fileExt === 'txt') {
+                        const csvText = e.target.result;
+                        // 按行分割
+                        const lines = csvText.split(/\r?\n/);
                         
-                        // 先检查第一列
-                        const firstCol = row[0] ? String(row[0]).trim() : '';
-                        
-                        // 判断是否是有效地址：以0x开头，长度在40-50之间（BSC地址是42位）
-                        if (firstCol.startsWith('0x') && firstCol.length >= 40 && firstCol.length <= 50) {
-                            addresses.push(firstCol);
-                        } 
-                        // 如果第一列不是地址，扫描整行找第一个看起来像地址的
-                        else {
-                            for (let j = 0; j < row.length; j++) {
-                                const cell = row[j] ? String(row[j]).trim() : '';
-                                if (cell.startsWith('0x') && cell.length >= 40 && cell.length <= 50) {
-                                    addresses.push(cell);
-                                    break; // 只取每行第一个找到的地址
+                        // 从第二行开始（跳过表头）
+                        for (let i = 1; i < lines.length; i++) {
+                            const line = lines[i].trim();
+                            if (!line) continue;
+                            
+                            // CSV可能包含逗号，取第一列
+                            let firstCol = line.split(',')[0].trim();
+                            // 移除可能的引号
+                            firstCol = firstCol.replace(/^["']|["']$/g, '');
+                            
+                            if (firstCol.startsWith('0x') && firstCol.length >= 40 && firstCol.length <= 50) {
+                                addresses.push(firstCol);
+                            } else {
+                                // 如果第一列不是地址，尝试在整行中找地址
+                                const parts = line.split(',');
+                                for (let j = 0; j < parts.length; j++) {
+                                    let cell = parts[j].trim().replace(/^["']|["']$/g, '');
+                                    if (cell.startsWith('0x') && cell.length >= 40 && cell.length <= 50) {
+                                        addresses.push(cell);
+                                        break;
+                                    }
                                 }
                             }
                         }
-                    }
-
-                    // 如果第二行开始没找到，可能是没有表头，从第一行开始找
-                    if (addresses.length === 0) {
-                        for (let i = 0; i < Math.min(rows.length, 10); i++) { // 只检查前10行
+                        
+                        // 如果没找到地址（可能是没有表头），从第一行开始找
+                        if (addresses.length === 0) {
+                            for (let i = 0; i < Math.min(lines.length, 10); i++) {
+                                const line = lines[i].trim();
+                                if (!line) continue;
+                                const parts = line.split(',');
+                                for (let j = 0; j < parts.length; j++) {
+                                    let cell = parts[j].trim().replace(/^["']|["']$/g, '');
+                                    if (cell.startsWith('0x') && cell.length >= 40 && cell.length <= 50) {
+                                        addresses.push(cell);
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                    } 
+                    // 如果是Excel文件，使用SheetJS解析
+                    else {
+                        const data = new Uint8Array(e.target.result);
+                        const workbook = XLSX.read(data, { type: 'array' });
+                        const firstSheetName = workbook.SheetNames[0];
+                        const worksheet = workbook.Sheets[firstSheetName];
+                        const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
+                        
+                        // 从第二行开始（跳过表头）
+                        for (let i = 1; i < rows.length; i++) {
                             const row = rows[i];
-                            if (!row) continue;
-                            for (let j = 0; j < row.length; j++) {
-                                const cell = row[j] ? String(row[j]).trim() : '';
-                                if (cell.startsWith('0x') && cell.length >= 40 && cell.length <= 50) {
-                                    addresses.push(cell);
-                                    break;
+                            if (!row || row.length === 0) continue;
+                            
+                            const firstCol = row[0] ? String(row[0]).trim() : '';
+                            if (firstCol.startsWith('0x') && firstCol.length >= 40 && firstCol.length <= 50) {
+                                addresses.push(firstCol);
+                            } else {
+                                for (let j = 0; j < row.length; j++) {
+                                    const cell = row[j] ? String(row[j]).trim() : '';
+                                    if (cell.startsWith('0x') && cell.length >= 40 && cell.length <= 50) {
+                                        addresses.push(cell);
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                        
+                        // 如果没找到地址，从第一行开始找
+                        if (addresses.length === 0) {
+                            for (let i = 0; i < Math.min(rows.length, 10); i++) {
+                                const row = rows[i];
+                                if (!row) continue;
+                                for (let j = 0; j < row.length; j++) {
+                                    const cell = row[j] ? String(row[j]).trim() : '';
+                                    if (cell.startsWith('0x') && cell.length >= 40 && cell.length <= 50) {
+                                        addresses.push(cell);
+                                        break;
+                                    }
                                 }
                             }
                         }
@@ -5840,14 +5876,20 @@
                     alert(`成功导入 ${uniqueAddresses.length} 个地址（已跳过表头）`);
                     
                 } catch (error) {
-                    console.error("Excel解析失败:", error);
+                    console.error("文件解析失败:", error);
                     alert("❌ 文件解析失败，请确保文件格式正确");
                 } finally {
                     event.target.value = ''; // 清空文件输入
                 }
             };
             
-            reader.readAsArrayBuffer(file);
+            // 根据文件类型选择不同的读取方式
+            const fileExt = file.name.split('.').pop().toLowerCase();
+            if (fileExt === 'csv' || fileExt === 'txt') {
+                reader.readAsText(file, 'utf-8'); // CSV文件以文本方式读取
+            } else {
+                reader.readAsArrayBuffer(file); // Excel文件以二进制方式读取
+            }
         }
     </script>
 </body>
