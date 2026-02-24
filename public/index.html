@@ -615,7 +615,32 @@
             font-size: 0.5rem;
         }
     }
-}
+
+        /* 文件上传按钮风格 */
+        .file-input-wrapper {
+            position: relative;
+            display: inline-block;
+            width: auto;
+        }
+        .file-input-wrapper input {
+            position: absolute;
+            left: -9999px;
+            opacity: 0;
+        }
+        .file-label {
+            background-color: #475569;
+            border: 1px solid #64748b;
+            padding: 6px 12px;
+            border-radius: 20px;
+            color: #e2e8f0;
+            font-size: 0.75rem;
+            cursor: pointer;
+            white-space: nowrap;
+            display: inline-block;
+        }
+        .file-label:hover {
+            background-color: #5f6b7a;
+        }
         /* 到这里结束 */
     </style>
 </head>
@@ -721,7 +746,13 @@
                 <!-- 保留几个测试地址方便快速测试 -->
                 <span class="example-tag" onclick="addSampleAddresses()">📝 导入地址(每天更新)</span>
                 <span class="example-tag" onclick="clearAddresses()">🗑️ 清空地址</span>
-                <span class="example-tag" onclick="loadLastQuery()">📂 加载上次查询</span>
+                <span class="example-tag" onclick="loadLastQuery()">📂 上次查询</span>
+                <!-- 新增下载/导入按钮 -->
+                <span class="example-tag" onclick="downloadQueryData()">⬇️ 下载数据</span>
+                <span class="file-input-wrapper">
+                    <input type="file" id="importFile" accept=".json" onchange="importQueryData(event)" />
+                    <label for="importFile" class="file-label">📂 导入数据</label>
+                </span>
             </div>
             
             <div class="btn-group">
@@ -5663,6 +5694,68 @@
             link.download = `每日统计_${new Date().toLocaleDateString()}.csv`;
             link.click();
         }
+
+         // ================= 新增下载/导入函数 =================
+        function downloadQueryData() {
+            if (allStakeRecords.length === 0 && queryResults.length === 0) {
+                alert("没有数据可下载");
+                return;
+            }
+            const exportData = {
+                version: "1.0",
+                exportTime: Date.now(),
+                stats: stats,
+                queryResults: queryResults,
+                allStakeRecords: allStakeRecords,
+                addressCache: Array.from(addressCache.entries()),
+                recordCache: Array.from(recordCache.entries()),
+                dailyStartHour: dailyStartHour,
+                lastAddressList: lastAddressList
+            };
+            const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `质押数据_${new Date().toISOString().slice(0,10)}.json`;
+            link.click();
+        }
+
+        async function importQueryData(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    if (!data.version || !data.allStakeRecords || !data.queryResults) {
+                        alert("❌ 无效的数据文件格式");
+                        return;
+                    }
+                    allStakeRecords = data.allStakeRecords || [];
+                    queryResults = data.queryResults || [];
+                    stats = data.stats || stats;
+                    dailyStartHour = data.dailyStartHour || 0;
+                    lastAddressList = data.lastAddressList || '';
+                    if (data.addressCache) addressCache = new Map(data.addressCache);
+                    if (data.recordCache) recordCache = new Map(data.recordCache);
+
+                    document.getElementById('dailyStartTime').value = dailyStartHour;
+                    updateTimezoneDisplay();
+                    regenerateDailyStatsTable();
+                    renderResults();
+                    updateStats();
+                    updateAllCharts();
+                    saveToStorage();
+                    document.getElementById('queryMode').innerText = '导入数据';
+                    document.getElementById('queryMode').className = 'query-mode mode-cached';
+                    alert(`✅ 数据导入成功！共 ${allStakeRecords.length} 条记录，${queryResults.length} 条活跃记录`);
+                    document.getElementById('importFile').value = '';
+                } catch (error) {
+                    console.error("导入失败:", error);
+                    alert("❌ 导入失败：文件格式错误");
+                }
+            };
+            reader.readAsText(file);
+        }       
     </script>
 </body>
 </html>
