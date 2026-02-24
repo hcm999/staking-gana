@@ -10,7 +10,9 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <!-- 引入 Ethers.js V6 -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.0/ethers.umd.min.js"></script>
-    <style>
+        <!-- 引入 SheetJS (XLSX) 用于解析 Excel 文件 -->
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
+<style>
         /* 样式保持不变，新增图表容器样式及tab */
         * {
             margin: 0;
@@ -744,14 +746,19 @@
                 <span class="example-tag" onclick="addAddress('0x55d398326f99059fF775485246999027B3197955')">USDT</span>
                 <span class="example-tag" onclick="addAddress('0xa2f464a2462aed49b9b31eb8861bc6b0bbb0483f')">LP池</span>
                 <!-- 保留几个测试地址方便快速测试 -->
-                <span class="example-tag" onclick="addSampleAddresses()">📝 导入地址</span>
-                <span class="example-tag" onclick="clearAddresses()">🗑️ 清空地址</span>
+                <span class="example-tag" onclick="addSampleAddresses()">📝 导入预设地址</span>
+                <span class="example-tag" onclick="clearAddresses()">🗑️ 清空</span>
                 <span class="example-tag" onclick="loadLastQuery()">📂 上次查询</span>
                 <!-- 新增下载/导入按钮 -->
                 <span class="example-tag" onclick="downloadQueryData()">⬇️ 下载数据</span>
                 <span class="file-input-wrapper">
                     <input type="file" id="importFile" accept=".json" onchange="importQueryData(event)" />
                     <label for="importFile" class="file-label">📂 导入数据</label>
+                </span>
+                <!-- 新增 Excel/CSV 导入按钮 (直接显示为标签样式) -->
+                <span class="file-input-wrapper" style="margin-left: 0;">
+                    <input type="file" id="excelImportFile" accept=".csv, .xlsx, .xls" onchange="importAddressesFromExcel(event)" />
+                    <label for="excelImportFile" class="file-label">📊 导入Excel/CSV</label>
                 </span>
             </div>
             
@@ -5755,7 +5762,72 @@
                 }
             };
             reader.readAsText(file);
-        }       
+        }
+        
+        // ================= 新增 Excel/CSV 地址导入函数 =================
+        function importAddressesFromExcel(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    
+                    // 获取第一个工作表
+                    const firstSheetName = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[firstSheetName];
+                    
+                    // 转换为 JSON，默认会按行解析，header:1 表示返回二维数组
+                    const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
+                    
+                    if (rows.length === 0) {
+                        alert("文件内容为空");
+                        return;
+                    }
+
+                    // 提取第一列的所有非空值作为地址
+                    const addresses = [];
+                    for (let i = 0; i < rows.length; i++) {
+                        const row = rows[i];
+                        if (row && row.length > 0) {
+                            const cellValue = String(row[0]).trim();
+                            // 简单的地址格式检查 (以0x开头且长度至少为42)
+                            if (cellValue.startsWith('0x') && cellValue.length >= 40) {
+                                addresses.push(cellValue);
+                            }
+                            // 如果第一列不是地址格式，尝试整行查找可能的地址（简单处理，只取第一个看起来像地址的单元格）
+                            else if (cellValue === '' && row.some(cell => String(cell).trim().startsWith('0x'))) {
+                                const found = row.find(cell => String(cell).trim().startsWith('0x'));
+                                if (found) addresses.push(String(found).trim());
+                            }
+                        }
+                    }
+
+                    if (addresses.length === 0) {
+                        alert("未在文件中找到有效的钱包地址（应以0x开头）");
+                        return;
+                    }
+
+                    // 去重并更新文本域
+                    const uniqueAddresses = [...new Set(addresses)];
+                    document.getElementById('addressList').value = uniqueAddresses.join('\n');
+                    updateAddressCount();
+                    
+                    alert(`成功导入 ${uniqueAddresses.length} 个地址`);
+                    
+                } catch (error) {
+                    console.error("Excel解析失败:", error);
+                    alert("❌ 文件解析失败，请确保文件格式正确");
+                } finally {
+                    // 清空文件输入，允许重复导入同一个文件
+                    event.target.value = '';
+                }
+            };
+            
+            reader.readAsArrayBuffer(file);
+        }
     </script>
 </body>
 </html>
