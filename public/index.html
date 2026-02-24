@@ -5947,16 +5947,10 @@ document.addEventListener('DOMContentLoaded', function() {
     toggleDiv.innerHTML = `
         <span style="color: #94a3b8; font-size: 0.85rem;">折叠/展开：</span>
         <button class="toggle-btn" data-target="config-panel" data-collapsed="false">
-            <span class="toggle-icon">▼</span> 统计起始时间
+            <span class="toggle-icon">▼</span> 起始时间
         </button>
         <button class="toggle-btn" data-target="address-input" data-collapsed="false">
             <span class="toggle-icon">▼</span> 查询面板
-        </button>
-        <button class="toggle-btn" id="collapseBoth">
-            <span class="toggle-icon">▼</span> 全部折叠
-        </button>
-        <button class="toggle-btn" id="expandBoth">
-            <span class="toggle-icon">▼</span> 全部展开
         </button>
     `;
     
@@ -6049,30 +6043,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
     setupToggle(configBtn, configPanel);
     setupToggle(addressBtn, addressInput);
-
-    // 全部折叠功能
-    document.getElementById('collapseBoth').addEventListener('click', function() {
-        // 折叠配置面板
-        if (configBtn.dataset.collapsed === 'false') {
-            configBtn.click();
-        }
-        // 折叠查询面板
-        if (addressBtn.dataset.collapsed === 'false') {
-            addressBtn.click();
-        }
-    });
-
-    // 全部展开功能
-    document.getElementById('expandBoth').addEventListener('click', function() {
-        // 展开配置面板
-        if (configBtn.dataset.collapsed === 'true') {
-            configBtn.click();
-        }
-        // 展开查询面板
-        if (addressBtn.dataset.collapsed === 'true') {
-            addressBtn.click();
-        }
-    });
 });
 </script>
 </body>
