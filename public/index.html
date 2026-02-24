@@ -695,26 +695,26 @@
         <!-- 统计卡片 - 第一行 -->
         <div class="stats-grid">
             <div class="stat-card">
-                <div class="stat-title">💰 总质押金额</div>
+                <div class="stat-title">💰 总质押额</div>
                 <div class="stat-value" id="totalStaked">0.00</div>
                 <div class="stat-sub">USDT</div>
             </div>
             <div class="stat-card">
-                <div class="stat-title">💰 1天质押金额</div>
+                <div class="stat-title">💰 1天质押额</div>
                 <div class="stat-value" id="totalStaked1d">0.00</div>
                 <div class="stat-sub">
                     <span id="count1d">0</span>记录
                 </div>
             </div>
             <div class="stat-card">
-                <div class="stat-title">💰 15天质押金额</div>
+                <div class="stat-title">💰 15天质押额</div>
                 <div class="stat-value" id="totalStaked15d">0.00</div>
                 <div class="stat-sub">
                     <span id="count15d">0</span>记录
                 </div>
             </div>
             <div class="stat-card">
-                <div class="stat-title">💰 30天质押金额</div>
+                <div class="stat-title">💰 30天质押额</div>
                 <div class="stat-value" id="totalStaked30d">0.00</div>
                 <div class="stat-sub">
                     <span id="count30d">0</span>记录
@@ -740,7 +740,7 @@
                 <div class="stat-sub">USDT</div>
             </div>
             <div class="stat-card">
-                <div class="stat-title">💰 LP池可提现USDT</div>
+                <div class="stat-title">💰 LP池余额</div>
                 <div class="stat-value" id="lpWithdrawable">0.00</div>
                 <div class="stat-sub">USDT</div>
             </div>
@@ -6986,7 +6986,7 @@ document.addEventListener('DOMContentLoaded', function() {
             color: white;
             padding: 8px 16px;
             border-radius: 30px;
-            font-size: 0.85rem;
+            font-size: 0.75rem;
             font-weight: 600;
             z-index: 9999;
             backdrop-filter: blur(5px);
@@ -6998,13 +6998,13 @@ document.addEventListener('DOMContentLoaded', function() {
         `;
         
         badge.innerHTML = `
-            <span style="font-size: 1.1rem;">${icon}</span>
+            <span style="font-size: 0.75rem;">${icon}</span>
             <span>
                 ${authData.type === 'admin' ? '管理员模式' : 
                   authData.type === 'code' ? `授权码 · ${DateUtils.formatDate(authData.expireTime)}` : 
                   `支付用户 · ${DateUtils.formatDate(authData.expireTime)}`}
                 ${authData.remainingDays && authData.remainingDays !== '永久' ? 
-                  `<span style="font-size:0.8rem; opacity:0.8;"> (剩余${authData.remainingDays}天)</span>` : ''}
+                  `<span style="font-size:0.75rem; opacity:0.8;"> (剩余${authData.remainingDays}天)</span>` : ''}
             </span>
         `;
         
