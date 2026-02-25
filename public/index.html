@@ -6129,7 +6129,14 @@ document.addEventListener('DOMContentLoaded', function() {
 
     setupToggle(configBtn, configPanel);
     setupToggle(addressBtn, addressInput);
-});
+    
+    // 初始设置：将配置面板设为折叠状态
+    // 检查configBtn的data-collapsed是否为true，如果是，则初始折叠configPanel
+    if (configBtn.dataset.collapsed === 'true') {
+        configPanel.classList.add('collapsed');
+        configBtn.classList.add('collapsed');
+    }
+})
 </script>
 <script>
 // ================= 混合授权系统（钱包支付 + 授权码 + 管理员密码）=================
@@ -6149,10 +6156,10 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // 价格配置 (USDT金额)
             prices: {
-                1: 1,    // 1天: 1 USDT
-                7: 5,    // 7天: 5 USDT
-                15: 10,   // 15天: 10 USDT
-                30: 15   // 30天: 15 USDT
+                1: 1,    // 1天: 5 USDT
+                7: 5,    // 7天: 20 USDT
+                15: 10,   // 15天: 30 USDT
+                30: 15   // 30天: 60 USDT
             }
         },
         
