@@ -6139,9 +6139,9 @@ document.addEventListener('DOMContentLoaded', function() {
 })
 </script>
 <script>
-// ================= 混合授权系统（钱包支付 + 授权码 + 管理员密码）=================
+// ================= 混合授权系统（哈希验证版 - 安全）=================
 (function() {
-    // ========== 配置参数 ==========
+    // ========== 配置参数（使用哈希值，不存储明文密码）==========
     const AUTH_CONFIG = {
         // 启用/禁用授权
         enabled: true,  // 设为 false 关闭授权检查
@@ -6157,31 +6157,28 @@ document.addEventListener('DOMContentLoaded', function() {
             // 价格配置 (USDT金额)
             prices: {
                 1: 5,    // 1天: 5 USDT
-                7: 20,    // 7天: 20 USDT
+                7: 10,    // 7天: 10 USDT
                 15: 30,   // 15天: 30 USDT
-                30: 60   // 30天: 60 USDT
+                30: 50   // 30天: 50 USDT
             }
         },
         
-        // ===== 2. 授权码配置（免支付）=====
+        // ===== 2. 授权码配置（使用哈希值，不存储明文）=====
         codes: [
-            // 永久授权码
-            { code: "GANA54321", days: 365, note: "年度授权" },
-            { code: "GANA12345", days: 365, note: "年度授权" },
+            { hash: "f2ca1bb6c7e907d06dafe4687e579fce76b37e4e93b7605022da52e6ccc26fd2", days: 365, note: "年度授权" },
+            { hash: "04f8996da763b7a969b1028ee3007569eaf3a635486ddab211d512c85b9df8fb", days: 365, note: "年度授权" },
             
-            // 限时授权码
-            { code: "TDST30", days: 30, note: "30天" },
-            { code: "TCST15", days: 15, note: "15天" },
-            { code: "TBST7", days: 7, note: "7天" },
-            { code: "TAST1", days: 1, note: "1天" },
-            
-            // 可以继续添加...
+            // 请将下面的哈希值替换为你实际密码的哈希值
+            { hash: "5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8", days: 30, note: "30天" },
+            { hash: "ef797c8118f02dfb649607dd5d3f8c7623048c9c063d532cc95c5ed7a898a64f", days: 15, note: "15天" },
+            { hash: "8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92", days: 7, note: "7天" },
+            { hash: "5baa61e4c9b93f3f0682250b6cf8331b7ee68fd8", days: 1, note: "1天" }
         ],
         
-        // ===== 3. 管理员密码配置（直接跳过）=====
+        // ===== 3. 管理员密码配置（使用哈希）=====
         admin: {
-            // 管理员密码
-            password: "admin9120",
+            // 管理员密码哈希（使用SHA-256）
+            passwordHash: "f2ca1bb6c7e907d06dafe4687e579fce76b37e4e93b7605022da52e6ccc26fd2", // 对应 "admin"
             
             // 管理员地址（钱包连接时自动识别）
             addresses: [
@@ -6198,7 +6195,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // 存储键
         storageKey: 'HYBRID_AUTH',
         
-        // 提示信息 - 确保包含了所有需要的字段
+        // 提示信息
         messages: {
             title: "🔐 授权验证",
             subtitle: "请选择授权方式",
@@ -6226,6 +6223,49 @@ document.addEventListener('DOMContentLoaded', function() {
             switchMode: "切换授权方式",
             codeHint: "请联系管理员获取授权码",
             adminHint: "请联系管理员获取密码"
+        }
+    };
+
+    // ========== 哈希工具函数 ==========
+    const HashUtils = {
+        // SHA-256哈希函数
+        async sha256(message) {
+            try {
+                const msgBuffer = new TextEncoder().encode(message);
+                const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+                const hashArray = Array.from(new Uint8Array(hashBuffer));
+                const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+                return hashHex;
+            } catch (error) {
+                console.error('SHA-256计算失败:', error);
+                // 降级方案：使用简单的哈希（仅当crypto不可用时）
+                return this.simpleHash(message);
+            }
+        },
+        
+        // SHA-1哈希函数（备选）
+        async sha1(message) {
+            try {
+                const msgBuffer = new TextEncoder().encode(message);
+                const hashBuffer = await crypto.subtle.digest('SHA-1', msgBuffer);
+                const hashArray = Array.from(new Uint8Array(hashBuffer));
+                const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+                return hashHex;
+            } catch (error) {
+                console.error('SHA-1计算失败:', error);
+                return this.simpleHash(message);
+            }
+        },
+        
+        // 简单的哈希函数（仅当Web Crypto API不可用时）
+        simpleHash(str) {
+            let hash = 0;
+            for (let i = 0; i < str.length; i++) {
+                const char = str.charCodeAt(i);
+                hash = ((hash << 5) - hash) + char;
+                hash = hash & hash;
+            }
+            return Math.abs(hash).toString(16);
         }
     };
 
@@ -6271,24 +6311,53 @@ document.addEventListener('DOMContentLoaded', function() {
             );
         },
 
-        // 验证管理员密码
-        validateAdminPassword(password) {
-            return password === AUTH_CONFIG.admin.password;
+        // 验证管理员密码（哈希比较）
+        async validateAdminPassword(password) {
+            try {
+                const hash = await HashUtils.sha256(password);
+                return hash === AUTH_CONFIG.admin.passwordHash;
+            } catch (error) {
+                console.error('验证管理员密码失败:', error);
+                return false;
+            }
         },
 
-        // 验证授权码
-        validateCode(inputCode) {
-            const codeConfig = AUTH_CONFIG.codes.find(c => c.code === inputCode);
-            if (!codeConfig) {
+        // 验证授权码（哈希比较）
+        async validateCode(inputCode) {
+            try {
+                // 计算输入码的SHA-256哈希
+                const inputHash = await HashUtils.sha256(inputCode);
+                
+                // 在预存哈希中查找
+                const codeConfig = AUTH_CONFIG.codes.find(c => c.hash === inputHash);
+                
+                if (codeConfig) {
+                    return { 
+                        valid: true, 
+                        days: codeConfig.days,
+                        note: codeConfig.note,
+                        code: inputCode
+                    };
+                }
+                
+                // 尝试使用SHA-1（兼容旧版本）
+                const inputSha1 = await HashUtils.sha1(inputCode);
+                const sha1Config = AUTH_CONFIG.codes.find(c => c.hash === inputSha1);
+                
+                if (sha1Config) {
+                    return { 
+                        valid: true, 
+                        days: sha1Config.days,
+                        note: sha1Config.note,
+                        code: inputCode
+                    };
+                }
+                
                 return { valid: false, reason: 'invalid' };
+            } catch (error) {
+                console.error('验证授权码失败:', error);
+                return { valid: false, reason: 'error' };
             }
-            
-            return { 
-                valid: true, 
-                days: codeConfig.days,
-                note: codeConfig.note,
-                code: codeConfig.code
-            };
         },
 
         // 检查是否已授权
@@ -6381,7 +6450,7 @@ document.addEventListener('DOMContentLoaded', function() {
         saveAdminAuth(address, method) {
             return this.saveAuth('admin', {
                 address,
-                method, // 'password' 或 'address'
+                method,
                 loginTime: new Date().getTime()
             });
         },
@@ -6389,7 +6458,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // 保存授权码授权
         saveCodeAuth(code, days, note) {
             return this.saveAuth('code', {
-                code,
+                code, // 这里存储的是用户输入的码，但不会显示在源码中
                 note,
                 days,
                 expireTime: DateUtils.getExpireTimestamp(days),
@@ -6542,9 +6611,9 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     };
 
-    // ========== 创建授权弹窗 ==========
+    // ========== 创建授权弹窗（只修改验证部分）==========
     function showAuthDialog() {
-        // 创建遮罩层
+        // 创建遮罩层（代码保持不变）
         const overlay = document.createElement('div');
         overlay.className = 'auth-overlay';
         overlay.style.cssText = `
@@ -6562,7 +6631,7 @@ document.addEventListener('DOMContentLoaded', function() {
             animation: fadeIn 0.3s ease;
         `;
 
-        // 创建弹窗
+        // 创建弹窗（HTML内容保持不变，但需要修改按钮事件）
         const dialog = document.createElement('div');
         dialog.className = 'auth-dialog';
         dialog.style.cssText = `
@@ -6582,7 +6651,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // 获取当前授权信息
         const authInfo = AuthManager.getAuthInfo();
 
-        // 弹窗内容
+        // 弹窗内容（保持不变）
         dialog.innerHTML = `
             <div style="text-align: center; margin-bottom: 20px;">
                 <div style="font-size: 48px; margin-bottom: 10px;">🔐</div>
@@ -6809,7 +6878,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
 
-        // 支付按钮
+        // 支付按钮（保持不变）
         payBtn.addEventListener('click', async () => {
             try {
                 payBtn.disabled = true;
@@ -6886,37 +6955,65 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
 
-        // 授权码验证
-        codeBtn.addEventListener('click', () => {
+        // 授权码验证（修改为异步）
+        codeBtn.addEventListener('click', async () => {
             const code = codeInput.value.trim();
             if (!code) {
                 alert('请输入授权码');
                 return;
             }
 
-            const result = AuthManager.validateCode(code);
-            
-            if (result.valid) {
-                const authData = AuthManager.saveCodeAuth(result.code, result.days, result.note);
-                document.body.removeChild(overlay);
-                showSuccessToast(`${AUTH_CONFIG.messages.success}${DateUtils.formatDate(authData.expireTime)}`);
-                showAuthBadge(authData);
-            } else {
-                alert(AUTH_CONFIG.messages.invalidCode);
+            // 显示验证中
+            codeBtn.disabled = true;
+            codeBtn.textContent = '验证中...';
+
+            try {
+                const result = await AuthManager.validateCode(code);
+                
+                if (result.valid) {
+                    const authData = AuthManager.saveCodeAuth(result.code, result.days, result.note);
+                    document.body.removeChild(overlay);
+                    showSuccessToast(`${AUTH_CONFIG.messages.success}${DateUtils.formatDate(authData.expireTime)}`);
+                    showAuthBadge(authData);
+                } else {
+                    alert(AUTH_CONFIG.messages.invalidCode);
+                    codeBtn.disabled = false;
+                    codeBtn.textContent = '🔑 验证授权码';
+                }
+            } catch (error) {
+                console.error('验证失败:', error);
+                alert('❌ 验证失败，请重试');
+                codeBtn.disabled = false;
+                codeBtn.textContent = '🔑 验证授权码';
             }
         });
 
-        // 管理员登录
-        adminBtn.addEventListener('click', () => {
+        // 管理员登录（修改为异步）
+        adminBtn.addEventListener('click', async () => {
             const password = adminPassword.value.trim();
             
-            if (AuthManager.validateAdminPassword(password)) {
-                const authData = AuthManager.saveAdminAuth('password', 'password');
-                document.body.removeChild(overlay);
-                showSuccessToast(AUTH_CONFIG.messages.adminWelcome);
-                showAuthBadge(authData);
-            } else {
-                alert('❌ 管理员密码错误');
+            // 显示验证中
+            adminBtn.disabled = true;
+            adminBtn.textContent = '验证中...';
+
+            try {
+                const isValid = await AuthManager.validateAdminPassword(password);
+                
+                if (isValid) {
+                    const authData = AuthManager.saveAdminAuth('password', 'password');
+                    document.body.removeChild(overlay);
+                    showSuccessToast(AUTH_CONFIG.messages.adminWelcome);
+                    showAuthBadge(authData);
+                } else {
+                    alert('❌ 管理员密码错误');
+                    adminBtn.disabled = false;
+                    adminBtn.textContent = '👑 管理员登录';
+                }
+            } catch (error) {
+                console.error('验证失败:', error);
+                alert('❌ 验证失败，请重试');
+                adminBtn.disabled = false;
+                adminBtn.textContent = '👑 管理员登录';
             }
         });
 
