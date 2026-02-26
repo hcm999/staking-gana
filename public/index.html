@@ -4901,7 +4901,7 @@
                 const now = new Date();
                 const diff = Math.floor((now - d) / (1000 * 60 * 60 * 24));
                 
-                let date = diff === 0 ? '今天' : diff === 1 ? '昨天' : `${d.getMonth()+1}/${d.getDate()}`;
+                let date = `${d.getMonth()+1}/${d.getDate()}`;
                 let time = d.toLocaleTimeString('zh-CN', {hour12: false}).slice(0,5);
                 
                 return {date, time};
